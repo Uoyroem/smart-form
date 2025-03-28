@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .smart-system-form [data-visible="false"] {
+            transform: translateX(100%);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .smart-system-form [data-visible="true"] {
+            transform: translateX(0);
+            opacity: 1;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .smart-system-form .autofill {
+            outline: dashed blue;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="test-form">
+        <div style="width: 100px;">
+
+            <input style="display: block; width: 100%;" type="number" name="amount" id="amount-input">
+            <input style="display: block; width: 100%;" type="number" name="percent" id="percent-input">
+            <input style="display: block; width: 100%;" type="number" name="total" id="total-input">
+            <div>
+                <input style="display: block; width: 100%;" type="number" name="total-pristine" id="total-pristine-input">
+            </div>
+        </div>
+    </form>
+    <script src="/dist/smart-form.bundle.js"></script>
+    <script>
+        class TestForm extends Uoyroem.Form {
+            constructor() {
+                super({ form: document.forms["test-form"] });
+            }
+
+            async setup() {
+                super.setup();
+                this.addFieldAutofillEffect("total", async () => {
+                    const amountField = this.fields.get("amount").getAdapter({ initiator: this });
+                    const percentField = this.fields.get("percent").getAdapter({ initiator: this });
+                    if (amountField.getValue() && percentField.getValue()) {
+                        return amountField.getValue() * percentField.getValue() / 100;
+                    }
+                    return 0;
+                }, ["amount", "percent"]);
+                this.addVisibleWhenEffect("total-pristine", async () => {
+                    const totalField = this.fields.get("total").getAdapter({ initiator: this });
+
+                    return totalField.getValue() && totalField.getValue() > 100;
+                }, ["total"]);
+                this.effectManager.buildDependenciesMap();
+                this.effectManager.triggerEffects();
+            }
+        }
+        const testForm = new TestForm();
+        testForm.setup();
+    </script>
+</body>
+
+</html>
