@@ -99,10 +99,11 @@ export namespace Uoyroem {
                 }
             }
             if (this._topologicalOrder.length !== this._names.size) {
-                console.error("There are cyclic dependencies.");
+                throw new Error("There are cyclic dependencies");
+                // console.error("There are cyclic dependencies.");
             } else {
-                console.log("Dependency map successfully built.")
-                console.log(this._topologicalOrder);
+                // console.log("Dependency map successfully built.")
+                // console.log(this._topologicalOrder);
             }
         }
 
@@ -116,16 +117,16 @@ export namespace Uoyroem {
 
         async triggerEffects({ changedNames = null }: { changedNames?: Set<string> | null } = {}) {
             if (changedNames == null) {
-                console.group("Triggering all effects");
+                // console.group("Triggering all effects");
             } else {
-                console.group("Triggering effects for changed names: ", changedNames)
+                // console.group("Triggering effects for changed names: ", changedNames)
             }
 
             for (const name of this._topologicalOrder) {
                 if (changedNames != null && this._dependentMap.get(name)!.intersection(changedNames).size === 0) {
                     continue;
                 }
-                console.group("Triggering effect: ", name);
+                // console.group("Triggering effect: ", name);
                 const effect = this._nameEffect.get(name);
                 if (effect != null) {
                     const changedNamesByEffect = await effect.callback();
@@ -135,12 +136,12 @@ export namespace Uoyroem {
                 } else {
                     if (changedNames) {
                         changedNames.add(name);
-                        console.log("There were changes");
+                        // console.log("There were changes");
                     }
                 }
-                console.groupEnd();
+                // console.groupEnd();
             }
-            console.groupEnd();
+            // console.groupEnd();
         }
     }
 
@@ -315,7 +316,7 @@ export namespace Uoyroem {
 
         initializeMeta(setMetaValue: (metaKey: string, value: any) => void): void {
             super.initializeMeta(setMetaValue);
-            setMetaValue("checked", true);
+            setMetaValue("checked", false);
         }
 
         getFieldValue(field: FormField): any {
@@ -445,7 +446,7 @@ export namespace Uoyroem {
 
         add(change: Change): void {
             this._changes.push(change);
-            console.log("[FieldChangeSet] Change", change, "added");
+            // console.log("[FieldChangeSet] Change", change, "added");
             if (this._changes.length > this._maxSize) {
                 const index = this._changes.findIndex(c => c.processed);
                 if (index !== -1) {
@@ -846,7 +847,7 @@ export namespace Uoyroem {
             switch (this.type.asElementType()) {
                 case "select-multiple":
                     if (!optionsInitialized) {
-                        console.log("PENDING OPTIONS INITIALIZE", value);
+                        // console.log("PENDING OPTIONS INITIALIZE", value);
                         return true;
                     }
                     const options = (value as any[]).map((value: any) => {
@@ -859,7 +860,7 @@ export namespace Uoyroem {
                     return true;
                 case "select-one":
                     if (!optionsInitialized) {
-                        console.log("PENDING OPTIONS INITIALIZE", value);
+                        // console.log("PENDING OPTIONS INITIALIZE", value);
                         return true;
                     }
                     const option = this.element.querySelector<HTMLOptionElement>(`option[value="${value}"]`);
@@ -908,7 +909,7 @@ export namespace Uoyroem {
                     this.element.classList.toggle("autofill", !!value);
                     break;
                 case "optionsInitialized":
-                    console.log("options initialized", !!value);
+                    // console.log("options initialized", !!value);
                     if (value) {
                         this._syncElementValue();
                     }
@@ -1065,7 +1066,7 @@ export namespace Uoyroem {
                 type: "disable-when",
                 callback: async () => {
                     const disabled = await disableWhen();
-                    console.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
+                    // console.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
                     return field.setMetaValue("disabled", disabled, { processChanges: true });
                 },
@@ -1079,7 +1080,7 @@ export namespace Uoyroem {
                 type: "visible-when",
                 callback: async () => {
                     const visible = await visibleWhen();
-                    console.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
+                    // console.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
                     return field.setMetaValue("visible", visible, { processChanges: true });
                 },
@@ -1093,7 +1094,7 @@ export namespace Uoyroem {
                 type: "computed-field",
                 callback: async () => {
                     const value = await compute();
-                    console.log(`[Effect.ComputedField] Field ${fieldName} value: `, value);
+                    // console.log(`[Effect.ComputedField] Field ${fieldName} value: `, value);
                     const field = this.fields.get(fieldName);
                     return field.setValue(value, { initiator: this, processChanges: true });
                 },
@@ -1113,7 +1114,7 @@ export namespace Uoyroem {
                         return field.processChanges();
                     }
                     const value = await autofillWith();
-                    console.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
+                    // console.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
                     field.setMetaValue("autofill", field.setValue(value).size !== 0);
                     return field.processChanges();
                 },
