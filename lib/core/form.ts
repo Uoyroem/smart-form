@@ -945,8 +945,8 @@ export namespace Uoyroem {
             if (changes.length === 0) return;
             for (const change of changes) {
                 if (change.type === ChangeType.METAVALUE && change.metaKey === "checked" && change.newValue && change.field.type.asElementType() === "radio") {
-                    const field = this.list.find(field => field.name === change.field.name && field !== change.field && field.getMetaValue("checked"));
-                    if (field != null) {
+                    const fields = this.list.filter(field => field.type.asElementType() === "radio" && field.name === change.field.name && field !== change.field && field.getMetaValue("checked"));
+                    for (const field of fields) {
                         field.setMetaValue("checked", false, { initiator: this, processChanges: true });
                     }
                 }
