@@ -806,6 +806,7 @@ export namespace Uoyroem {
     export class FormFieldElementLinker extends FormFieldLinker {
         public element: FormElement;
         private _mutationObserver: MutationObserver;
+        private _handleHideContainer: ((event: Event) => void) | null;
         /**
          * 
          * @param {FormField} field 
@@ -820,6 +821,7 @@ export namespace Uoyroem {
             this._fieldChangesEventListener = this._fieldChangesEventListener.bind(this);
             this._elementValueInputEventListener = this._elementValueInputEventListener.bind(this);
             this._elementValueChangeEventListener = this._elementValueChangeEventListener.bind(this);
+            this._handleHideContainer = null;
             this._mutationObserver = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
                     if (mutation.type === "attributes") {
@@ -946,6 +948,10 @@ export namespace Uoyroem {
                 case "visible":
                     const container = this.element.parentElement;
                     if (container != null) {
+                        if (this._handleHideContainer != null) {
+                            container.removeEventListener("transitionend", this._handleHideContainer);
+                            this._handleHideContainer = null;
+                        }
                         if (value) {
                             if (container.style.display === "none") {
                                 container.style.display = "";
@@ -957,9 +963,10 @@ export namespace Uoyroem {
                             }
                         } else {
                             if (container.style.display !== "none") {
-                                container.addEventListener("transitionend", (event) => {
+                                this._handleHideContainer = (event: Event) => {
                                     container.style.display = "none";
-                                }, { once: true });
+                                };
+                                container.addEventListener("transitionend", this._handleHideContainer, { once: true });
                             }
                             container.dataset.visible = "false";
                         }
