@@ -1,0 +1,17 @@
+.uoyroem-form {
+    [data-visible="true"] {
+        transform: translateX(0);
+        opacity: 1;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    [data-visible="false"] {
+        transform: translateX(100%);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .autofill {
+        outline: dashed blue;
+    }
+}

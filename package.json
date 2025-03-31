@@ -9,15 +9,24 @@
     "test": "jest",
     "test:watch": "jest --watch"
   },
-  "keywords": ["form", "reactive", "dom", "form-dependencies"],
+  "keywords": [
+    "form",
+    "reactive",
+    "dom",
+    "form-dependencies"
+  ],
   "author": "Samat Polatov <uoyroem@gmail.com>",
   "license": "ISC",
   "description": "",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "@types/jest": "^29.5.14",
+    "css-loader": "^7.1.2",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "sass": "^1.86.0",
+    "sass-loader": "^16.0.5",
+    "style-loader": "^4.0.0",
     "ts-jest": "^29.3.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.2",

@@ -1,3 +1,4 @@
+
 export namespace Uoyroem {
     function deepEqual(a: any, b: any): boolean {
         if (a === b) return true;
@@ -1082,7 +1083,7 @@ export namespace Uoyroem {
 
         async setup() {
             if (this.form != null) {
-                this.form.classList.add("smart-system-form");
+                this.form.classList.add("uoyroem-form");
                 this.form.noValidate = true;
 
                 this.form.addEventListener("submit", (event) => {
