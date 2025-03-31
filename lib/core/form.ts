@@ -20,7 +20,7 @@ export namespace Uoyroem {
     }
 
     export function getMetaDependencyKey(fieldName: string, metaKey: string) {
-        return `${fieldName}.${metaKey}`;
+        return `${fieldName}:${metaKey}`;
     }
 
     export interface Effect {
@@ -145,7 +145,6 @@ export namespace Uoyroem {
         }
     }
 
-
     export class FormFieldValidator {
         public name: string;
 
@@ -154,6 +153,16 @@ export namespace Uoyroem {
         }
 
         validate(field: FormField) {
+
+        }
+    }
+
+    export class FormFieldValidatorRequired extends FormFieldValidator {
+        constructor() {
+            super("Required");
+        }
+
+        validate(field: FormField): void {
 
         }
     }
@@ -452,7 +461,7 @@ export namespace Uoyroem {
         }
 
         findLast(filter: (change: Change) => boolean): Change | undefined {
-            return this._changes.find(change => change.last && filter(change));
+            return this._changes.findLast(change => change.last && filter(change));
         }
 
         getFieldChanges(field: FormField): Change[] {
@@ -546,6 +555,16 @@ export namespace Uoyroem {
             return this;
         }
 
+        get context(): FormFieldContext {
+            return {
+                disabledIsNull: true,
+                initiator: null,
+                stateKey: null,
+                raw: false,
+                processChanges: false
+            };
+        }
+
         get changeSet(): FormFieldChangeSet {
             return this._changeSet;
         }
@@ -558,13 +577,13 @@ export namespace Uoyroem {
             return this._type;
         }
 
-        initialValue(callback: (setValue: (value: any) => void) => void) {
+        initialValue(callback: (setValue: (value: any) => void) => void): void {
             callback(value => {
                 this._initialValue = value;
             });
         }
 
-        initialMeta(callback: (setValue: (metaKey: string, value: any) => void) => void, clear = false) {
+        initialMeta(callback: (setValue: (metaKey: string, value: any) => void) => void, clear = false): void {
             if (clear) {
                 this._initialMeta = new Map();
             }
@@ -616,14 +635,16 @@ export namespace Uoyroem {
                             return target;
                         case "context":
                             return outerContext;
+                        case "getAdapter":
+                            return (innerContext: FormFieldContext = {}) => target.getAdapter({ ...outerContext, ...innerContext });
                         case "getValue":
-                            return (innerContext: FormFieldContext = {}) => target.getValue(Object.assign(outerContext, innerContext));
+                            return (innerContext: FormFieldContext = {}) => target.getValue({ ...outerContext, ...innerContext });
                         case "getMetaValue":
-                            return (metaKey: string, innerContext: FormFieldContext = {}) => target.getMetaValue(metaKey, Object.assign(outerContext, innerContext));
+                            return (metaKey: string, innerContext: FormFieldContext = {}) => target.getMetaValue(metaKey, { ...outerContext, ...innerContext });
                         case "setValue":
-                            return (newValue: any, innerContext: FormFieldContext = {}) => target.setValue(newValue, Object.assign(outerContext, innerContext));
+                            return (newValue: any, innerContext: FormFieldContext = {}) => target.setValue(newValue, { ...outerContext, ...innerContext });
                         case "setMetaValue":
-                            return (metaKey: string, newValue: any, innerContext: FormFieldContext = {}) => target.setMetaValue(metaKey, newValue, Object.assign(outerContext, innerContext));
+                            return (metaKey: string, newValue: any, innerContext: FormFieldContext = {}) => target.setMetaValue(metaKey, newValue, { ...outerContext, ...innerContext });
                         default:
                             const value = Reflect.get(target, propertyKey, receiver);
                             return typeof value === "function" ? value.bind(target) : value;
@@ -649,7 +670,7 @@ export namespace Uoyroem {
                 const oldValue = this.getValue({ stateKey, raw: true });
                 if (this.type.isEqual(oldValue, newValue)) return new Set();
                 this._valueMap.set(stateKey, newValue);
-                const lastChange = this.changeSet.findLast(change => change.type === "value");
+                const lastChange = this.changeSet.findLast(change => change.field === this && change.type === ChangeType.VALUE);
                 if (lastChange) {
                     lastChange.last = false;
                 }
@@ -684,11 +705,13 @@ export namespace Uoyroem {
             if (raw) {
                 initiator ??= this;
                 stateKey ??= this._currentStateKey;
-                if (!this._metaMap.has(stateKey)) return new Set();
+
+                if (!this._metaMap.has(stateKey)) this.reset({ stateKey: stateKey });
+                
                 const oldValue = this.getMetaValue(metaKey, { stateKey });
                 if (oldValue === newValue) return new Set();
                 this._metaMap.get(stateKey)!.set(metaKey, newValue);
-                const lastChange = this.changeSet.findLast(change => change.type === "metavalue" && change.metaKey === metaKey);
+                const lastChange = this.changeSet.findLast(change => change.field === this && change.type === ChangeType.METAVALUE && change.metaKey === metaKey);
                 if (lastChange != null) {
                     lastChange.last = false;
                 }
@@ -727,14 +750,16 @@ export namespace Uoyroem {
                             return target;
                         case "context":
                             return outerContext;
+                        case "getAdapter":
+                            return (innerContext: FormFieldContext = {}) => target.getAdapter({ ...outerContext, ...innerContext });
                         case "getValue":
-                            return (innerContext: FormFieldContext = {}) => target.getValue(Object.assign(outerContext, innerContext));
+                            return (innerContext: FormFieldContext = {}) => target.getValue({ ...outerContext, ...innerContext });
                         case "getMetaValue":
-                            return (metaKey: string, innerContext: FormFieldContext = {}) => target.getMetaValue(metaKey, Object.assign(outerContext, innerContext));
+                            return (metaKey: string, innerContext: FormFieldContext = {}) => target.getMetaValue(metaKey, { ...outerContext, ...innerContext });
                         case "setValue":
-                            return (newValue: any, innerContext: FormFieldContext = {}) => target.setValue(newValue, Object.assign(outerContext, innerContext));
+                            return (newValue: any, innerContext: FormFieldContext = {}) => target.setValue(newValue, { ...outerContext, ...innerContext });
                         case "setMetaValue":
-                            return (metaKey: string, newValue: any, innerContext: FormFieldContext = {}) => target.setMetaValue(metaKey, newValue, Object.assign(outerContext, innerContext));
+                            return (metaKey: string, newValue: any, innerContext: FormFieldContext = {}) => target.setMetaValue(metaKey, newValue, { ...outerContext, ...innerContext });
                         default:
                             const value = Reflect.get(target, propertyKey, receiver);
                             return typeof value === "function" ? value.bind(target) : value;
@@ -762,10 +787,6 @@ export namespace Uoyroem {
         processChanges(): Set<string> {
             return this.fieldArray.map(field => field.processChanges()).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
-    }
-
-    export class FormFieldGroup {
-        constructor(public formGroup: Record<string, FormField | FormFieldArray | FormFieldGroup>) { }
     }
 
     export abstract class FormFieldLinker {
@@ -1008,25 +1029,18 @@ export namespace Uoyroem {
     }
 
     export abstract class FormChangesManager {
-        filter(form: Form, changes: Change[]): Change[] {
-            return changes.filter(change => change.initiator !== form);
-        }
-
         abstract manage(form: Form, changes: Change[]): void;
     }
 
     export class FormChangesForRadioManager extends FormChangesManager {
-        filter(form: Form, changes: Change[]): Change[] {
-            return super.filter(form, changes).filter(change =>
+        override manage(form: Form, changes: Change[]): void {
+            changes.filter(change =>
+                change.initiator !== form &&
                 change.field.type.asElementType() === "radio" &&
                 change.type === ChangeType.METAVALUE &&
                 change.metaKey === "checked" &&
                 change.newValue
-            );
-        }
-
-        override manage(form: Form, changes: Change[]): void {
-            changes.forEach(change => {
+            ).forEach(change => {
                 form.fields.list.filter(field =>
                     field.name === change.field.name &&
                     field.type.asElementType() === "radio" &&
@@ -1041,6 +1055,8 @@ export namespace Uoyroem {
 
     export class FormChangesForTriggerEffectsManager extends FormChangesManager {
         override manage(form: Form, changes: Change[]): void {
+            changes = changes.filter(change => change.initiator !== form);
+            if (changes.length === 0) return;
             form.effectManager.triggerEffects({ changedNames: FormFieldChangeSet.asChangedNames(changes) });
         }
     }
@@ -1089,11 +1105,7 @@ export namespace Uoyroem {
         _handleChanges(event: Event) {
             const changes = (event as ChangesEvent).changes;
             for (const changesManager of this._changesManagers) {
-                const filteredChanges = changesManager.filter(this, changes);
-                if (filteredChanges.length === 0) {
-                    continue;
-                }
-                changesManager.manage(this, filteredChanges);
+                changesManager.manage(this, changes);
             }
         }
 

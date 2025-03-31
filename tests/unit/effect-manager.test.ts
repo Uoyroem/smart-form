@@ -1,38 +1,65 @@
-import { Uoyroem } from "../../lib/core/form";
+// EffectManager.test.ts
+import { Uoyroem } from '../../lib/core/form';
 
-describe("Uoyroem.EffectManager", () => {
-    let manager: Uoyroem.EffectManager;
+describe('EffectManager', () => {
+  let effectManager: Uoyroem.EffectManager;
 
-    beforeEach(() => {
-        manager = new Uoyroem.EffectManager();
+  beforeEach(() => {
+    effectManager = new Uoyroem.EffectManager();
+  });
+
+  it('should add effect and build dependencies', () => {
+    effectManager.addEffect("effect1", {
+      type: "test",
+      callback: () => Promise.resolve(new Set()),
+      dependsOn: ["dep1", "dep2"]
     });
 
-    test("should build dependency graph", () => {
-        manager.addEffect("effect1", {
-            type: "test",
-            callback: () => new Set(),
-            dependsOn: ["field1"],
-        });
+    effectManager.buildDependenciesMap();
 
-        manager.buildDependenciesMap();
-        expect(manager["_topologicalOrder"]).toEqual(
-            expect.arrayContaining(["field1", "effect1"])
-        );
+    expect(effectManager["_dependentMap"].get("effect1")).toEqual(new Set(["dep1", "dep2"]));
+  });
+
+  it('should detect cyclic dependencies', () => {
+    effectManager.addEffect("effect1", {
+      type: "test",
+      callback: () => Promise.resolve(new Set()),
+      dependsOn: ["effect2"]
     });
 
-    it("should detect circular dependencies", () => {
-        manager.addEffect("effect1", {
-            type: "test",
-            callback: () => new Set(),
-            dependsOn: ["effect2"],
-        });
-
-        manager.addEffect("effect2", {
-            type: "test",
-            callback: () => new Set(),
-            dependsOn: ["effect1"],
-        });
-
-        expect(() => manager.buildDependenciesMap()).toThrow("cyclic");
+    effectManager.addEffect("effect2", {
+      type: "test",
+      callback: () => Promise.resolve(new Set()),
+      dependsOn: ["effect1"]
     });
+
+    expect(() => effectManager.buildDependenciesMap()).toThrow("There are cyclic dependencies");
+  });
+
+  it('should trigger effects in topological order', async () => {
+    const calls: string[] = [];
+
+    effectManager.addEffect("effect1", {
+      type: "test",
+      callback: () => {
+        calls.push("effect1");
+        return Promise.resolve(new Set());
+      },
+      dependsOn: ["effect2"]
+    });
+
+    effectManager.addEffect("effect2", {
+      type: "test",
+      callback: () => {
+        calls.push("effect2");
+        return Promise.resolve(new Set());
+      },
+      dependsOn: []
+    });
+
+    effectManager.buildDependenciesMap();
+    await effectManager.triggerEffects();
+
+    expect(calls).toEqual(["effect2", "effect1"]);
+  });
 });

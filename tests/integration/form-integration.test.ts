@@ -2,27 +2,29 @@ import { Uoyroem } from "../../lib/core/form";
 
 describe("Form with Radio Buttons", () => {
   let form: Uoyroem.Form;
-  let genderField: Uoyroem.FormFieldArray;
+  let maleRadioField: Uoyroem.FormField;
+  let femaleRadioField: Uoyroem.FormField;
 
   beforeEach(async () => {
-      document.body.innerHTML = `
-          <form id="test-form">
-              <input type="radio" name="gender" value="male">
-              <input type="radio" name="gender" value="female">
-          </form>
-      `;
+    form = new Uoyroem.Form({ form: document.createElement("form") });
+    await form.setup();
 
-      form = new Uoyroem.Form({ form: document.forms.namedItem("test-form")! });
-      await form.setup();
-      genderField = form.fields.get("gender") as Uoyroem.FormFieldArray;
+    maleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    maleRadioField.setValue("male", { raw: true, processChanges: true });
+    form.fields.add(maleRadioField);
+
+    femaleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    femaleRadioField.setValue("female", { raw: true, processChanges: true });
+    form.fields.add(femaleRadioField);
   });
 
   it("should uncheck other radios when one is checked", () => {
-      // Выбираем первый радио-элемент
-      genderField.setValue("male", { processChanges: true });
-      genderField.setValue("female", { processChanges: true });
+    maleRadioField.setMetaValue("checked", true, { processChanges: true });
+    femaleRadioField.setMetaValue("checked", true, { processChanges: true });
 
-      // Проверяем, что второй автоматически сбросился
-      expect(genderField.getValue()).toBe("female");
+    expect(maleRadioField.getMetaValue("checked")).toBe(false);
+    expect(femaleRadioField.getMetaValue("checked")).toBe(true);
+
+    expect(form.fields.get("gender").getValue()).toBe("female");
   });
 });
