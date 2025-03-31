@@ -1,4 +1,4 @@
-import { Uoyroem } from "../lib/core/form";
+import { Uoyroem } from "../../lib/core/form";
 
 describe("Uoyroem.Form Integration", () => {
   let form: Uoyroem.Form;

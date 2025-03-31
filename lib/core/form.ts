@@ -241,12 +241,20 @@ export namespace Uoyroem {
         isEmpty() { }
         asElementType() { return "hidden"; }
 
-        getFieldValue(field: FormField) {
-            return field.getValue();
+        getFieldValue(field: FormField): any {
+            return field.getRawValue();
+        }
+
+        getFieldMetaValue(field: FormField, metaKey: string): any {
+            return field.getRawMetaValue(metaKey);
         }
 
         setFieldValue(field: FormField, newValue: any): Set<string> {
-            return field.setValue(newValue);
+            return field.setRawValue(newValue);
+        }
+
+        setFieldMetaValue(field: FormField, metaKey: string, newValue: any): Set<string> {
+            return field.setRawMetaValue(metaKey, newValue);
         }
 
         initializeValue(setValue: (value: any) => void): void {
@@ -323,8 +331,13 @@ export namespace Uoyroem {
             return field.getMetaValue("checked") ? field.getValue() : null;
         }
 
-        setFieldValue(field: FormField, newValue: any): any {
-            return field.setMetaValue("checked", newValue != null && newValue === field.getValue());
+        setFieldMetaValue(field: FormField, metaKey: string, newValue: any): Set<string> {
+            if (metaKey === "string" && newValue) {
+                field.siblings.filter(sibling => sibling.getRawMetaValue("checked")).forEach(sibling => {
+                    sibling.setRawMetaValue("checked", false, { initiator: this, processChanges: true });
+                });
+            }
+            return field.setRawMetaValue(metaKey, newValue, { initiator: this });
         }
     }
 
@@ -509,9 +522,10 @@ export namespace Uoyroem {
     }
 
     export class FormField extends EventTarget {
-        public name: string;
-        public type: FormFieldType;
-        public changeSet: FormFieldChangeSet;
+        private _name: string;
+        private _type: FormFieldType;
+        private _changeSet: FormFieldChangeSet;
+        private _collection: FormFieldsCollection | null;
         private _initializedStateKeys: Set<string>;
         private _initialValue: any;
         private _valueMap: Map<string, any>;
@@ -519,10 +533,11 @@ export namespace Uoyroem {
         private _metaMap: Map<string, Map<string, any>>;
         private _currentStateKey: string;
 
-        constructor(name: string, type: FormFieldType, { changeSet = null, effectManager = null }: { changeSet?: FormFieldChangeSet | null, effectManager?: any } = {}) {
+        constructor(name: string, type: FormFieldType, { changeSet = null, effectManager = null, collection = null }: { changeSet?: FormFieldChangeSet | null, effectManager?: EffectManager | null, collection?: FormFieldsCollection | null } = {}) {
             super();
-            this.name = name;
-            this.type = type;
+            this._name = name;
+            this._type = type;
+            this._collection = collection;
             this._initializedStateKeys = new Set();
             this._currentStateKey = "default";
 
@@ -534,12 +549,40 @@ export namespace Uoyroem {
             this.initialMeta(setMetaValue => type.initializeMeta(setMetaValue), false);
             this._metaMap = new Map();
 
-            this.changeSet = changeSet ?? new FormFieldChangeSet(32);
+            this._changeSet = changeSet ?? new FormFieldChangeSet(32);
 
             this.switchState("default");
             if (effectManager != null) {
                 this.initializeDependencies(effectManager);
             }
+        }
+
+        get self(): this {
+            return this;
+        }
+
+        get changeSet(): FormFieldChangeSet {
+            return this._changeSet;
+        }
+
+        get name(): string {
+            return this._name;
+        }
+
+        get type(): FormFieldType {
+            return this._type;
+        }
+
+        get collection(): FormFieldsCollection | null {
+            return this._collection;
+        }
+
+        set collection(value: FormFieldsCollection | null) {
+            this._collection = value;
+        }
+
+        get siblings(): FormField[] {
+            return this._collection != null ? this._collection.list.filter(field => field.self.name === this.name && field.self !== this) : [];
         }
 
         initialValue(callback: (setValue: (value: any) => void) => void) {
@@ -563,9 +606,9 @@ export namespace Uoyroem {
 
             this._valueMap.set(stateKey, null);
             this._metaMap.set(stateKey, new Map());
-            this.setValue(this._initialValue, { stateKey, initiator, typed: false });
+            this.setRawValue(this._initialValue, { stateKey, initiator });
             for (const [metaKey, value] of this._initialMeta.entries()) {
-                this.setMetaValue(metaKey, value, { stateKey, initiator });
+                this.setRawMetaValue(metaKey, value, { stateKey, initiator });
             }
             return this.processChanges();
         }
@@ -592,19 +635,31 @@ export namespace Uoyroem {
             }
         }
 
-        getAdapter({ stateKey = null, initiator = null, disabledIsNull = true, typed = true }: { stateKey?: string | null, initiator?: any, disabledIsNull?: boolean, typed?: boolean } = {}) {
-            const context = { stateKey, initiator, typed, disabledIsNull };
+        getAdapter({ stateKey = null, initiator = null, disabledIsNull = true, processChanges = false }: { stateKey?: string | null, initiator?: any, disabledIsNull?: boolean, processChanges?: boolean } = {}) {
+            const context = { stateKey, initiator, disabledIsNull, processChanges };
             return new Proxy(this, {
                 get(target, propertyKey, receiver) {
                     switch (propertyKey) {
+                        case "self":
+                            return target;
+                        case "context":
+                            return context;
+                        case "getRawValue":
+                            return ({ stateKey = context.stateKey } = {}) => target.getRawValue({ stateKey });
                         case "getValue":
-                            return ({ stateKey = context.stateKey, typed = context.typed, disabledIsNull = context.disabledIsNull } = {}) => target.getValue({ typed, stateKey, disabledIsNull });
+                            return ({ stateKey = context.stateKey, disabledIsNull = context.disabledIsNull } = {}) => target.getValue({ stateKey, disabledIsNull });
+                        case "getRawMetValue":
+                            return (metaKey: string, { stateKey = context.stateKey } = {}) => target.getRawMetaValue(metaKey, { stateKey });
                         case "getMetaValue":
                             return (metaKey: string, { stateKey = context.stateKey } = {}) => target.getMetaValue(metaKey, { stateKey });
+                        case "setRawValue":
+                            return (newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = context.processChanges } = {}) => target.setRawValue(newValue, { stateKey, initiator, processChanges });
                         case "setValue":
-                            return (newValue: any, { stateKey = context.stateKey, typed = context.typed, initiator = context.initiator, processChanges = false } = {}) => target.setValue(newValue, { stateKey, typed, initiator, processChanges });
+                            return (newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = context.processChanges } = {}) => target.setValue(newValue, { stateKey, initiator, processChanges });
+                        case "setRawMetaValue":
+                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = context.processChanges } = {}) => target.setRawMetaValue(metaKey, newValue, { stateKey, initiator, processChanges });
                         case "setMetaValue":
-                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setMetaValue(metaKey, newValue, { stateKey, initiator, processChanges });
+                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = context.processChanges } = {}) => target.setMetaValue(metaKey, newValue, { stateKey, initiator, processChanges });
                         default:
                             const value = Reflect.get(target, propertyKey, receiver);
                             return typeof value === "function" ? value.bind(target) : value;
@@ -613,23 +668,21 @@ export namespace Uoyroem {
             });
         }
 
-        getValue({ stateKey = null, typed = true, disabledIsNull = true }: { stateKey?: string | null, typed?: boolean, disabledIsNull?: boolean } = {}): any {
-            if (disabledIsNull && this.getMetaValue("disabled", { stateKey })) {
-                return null;
-            }
-            if (typed) {
-                return this.type.getFieldValue(this.getAdapter({ stateKey, disabledIsNull: false, typed: false }));
-            }
+        getRawValue({ stateKey = null }: { stateKey?: string | null } = {}): any {
             return this._valueMap.get(stateKey ?? this._currentStateKey);
         }
 
-        setValue(newValue: any, { stateKey = null, typed = true, initiator = null, processChanges = false }: { stateKey?: string | null, typed?: boolean, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+        getValue({ stateKey = null, disabledIsNull = true }: { stateKey?: string | null, disabledIsNull?: boolean } = {}): any {
+            if (disabledIsNull && this.getRawMetaValue("disabled", { stateKey })) {
+                return null;
+            }
+            return this.type.getFieldValue(this.getAdapter({ stateKey, disabledIsNull: false }));
+        }
+
+        setRawValue(newValue: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
             initiator ??= this;
             stateKey ??= this._currentStateKey;
-            if (typed) {
-                return this.type.setFieldValue(this.getAdapter({ stateKey, disabledIsNull: false, typed: false, initiator }), newValue);
-            }
-            const oldValue = this.getValue({ stateKey, typed: false });
+            const oldValue = this.getRawValue({ stateKey });
             if (this.type.isEqual(oldValue, newValue)) return new Set();
             this._valueMap.set(stateKey, newValue);
             const lastChange = this.changeSet.findLast(change => change.type === "value");
@@ -651,14 +704,22 @@ export namespace Uoyroem {
             return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames([change]);
         }
 
-        getMetaValue<T = any>(metaKey: string, { stateKey = null }: { stateKey?: string | null } = {}): T | null {
+        setValue(newValue: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+            return this.type.setFieldValue(this.getAdapter({ stateKey, disabledIsNull: false, processChanges, initiator }), newValue);
+        }
+
+        getRawMetaValue<T = any>(metaKey: string, { stateKey = null }: { stateKey?: string | null } = {}): T | null {
             stateKey ??= this._currentStateKey
             if (!this._metaMap.has(stateKey)) return null;
             const meta = this._metaMap.get(stateKey);
             return meta!.get(metaKey);
         }
 
-        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+        getMetaValue<T = any>(metaKey: string, { stateKey = null }: { stateKey?: string | null } = {}): T | null {
+            return this.type.getFieldMetaValue(this.getAdapter({ stateKey }), metaKey);
+        }
+
+        setRawMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
             initiator ??= this;
             stateKey ??= this._currentStateKey;
             if (!this._metaMap.has(stateKey)) return new Set();
@@ -686,27 +747,41 @@ export namespace Uoyroem {
             return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames([change]);
         }
 
+        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+            return this.type.setFieldMetaValue(this.getAdapter({ stateKey, disabledIsNull: false, initiator, processChanges }), metaKey, newValue);
+        }
+
         processChanges(): Set<string> {
             return this.changeSet.processChanges(this);
         }
     }
 
-    export class FormFieldList {
-        constructor(public fields: FormField[]) { }
+    export class FormFieldArray {
+        constructor(public fieldArray: FormField[]) { }
 
-        getAdapter({ stateKey = null, initiator = null, disabledIsNull = true, typed = true }: { stateKey?: string | null, typed?: boolean, initiator?: any, disabledIsNull?: boolean } = {}) {
-            const context = { stateKey, initiator, typed, disabledIsNull };
+        getAdapter({ stateKey = null, initiator = null, disabledIsNull = true, processChanges = false }: { stateKey?: string | null, initiator?: any, disabledIsNull?: boolean, processChanges?: boolean } = {}) {
+            const context = { stateKey, initiator, disabledIsNull, processChanges };
             return new Proxy(this, {
                 get(target, propertyKey, receiver) {
                     switch (propertyKey) {
+                        case "context":
+                            return context;
+                        case "getRawValue":
+                            return ({ stateKey = context.stateKey } = {}) => target.getRawValue({ stateKey });
                         case "getValue":
-                            return ({ stateKey = context.stateKey, typed = context.typed, disabledIsNull = context.disabledIsNull } = {}) => target.getValue({ typed, stateKey, disabledIsNull });
+                            return ({ stateKey = context.stateKey, disabledIsNull = context.disabledIsNull } = {}) => target.getValue({ stateKey, disabledIsNull });
+                        case "getRawMetValue":
+                            return (metaKey: string, { stateKey = context.stateKey } = {}) => target.getRawMetaValue(metaKey, { stateKey });
                         case "getMetaValue":
-                            return (metaKey: string, { stateKey = context.stateKey } = {}) => target.getMetaValue(metaKey, { stateKey })
+                            return (metaKey: string, { stateKey = context.stateKey } = {}) => target.getMetaValue(metaKey, { stateKey });
+                        case "setRawValue":
+                            return (newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setRawValue(newValue, { stateKey, initiator, processChanges });
                         case "setValue":
-                            return (newValue: any, { stateKey = context.stateKey, typed = context.typed, initiator = context.initiator, processChanges = false } = {}) => target.setValue(newValue, { stateKey, typed, initiator, processChanges })
+                            return (newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setValue(newValue, { stateKey, initiator, processChanges });
+                        case "setRawMetaValue":
+                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setRawMetaValue(metaKey, newValue, { stateKey, initiator, processChanges });
                         case "setMetaValue":
-                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setMetaValue(metaKey, newValue, { stateKey, initiator, processChanges })
+                            return (metaKey: string, newValue: any, { stateKey = context.stateKey, initiator = context.initiator, processChanges = false } = {}) => target.setMetaValue(metaKey, newValue, { stateKey, initiator, processChanges });
                         default:
                             const value = Reflect.get(target, propertyKey, receiver);
                             return typeof value === "function" ? value.bind(target) : value;
@@ -715,25 +790,45 @@ export namespace Uoyroem {
             });
         }
 
-        getValue({ stateKey = null, disabledIsNull = true, typed = true }: { stateKey?: string | null, disabledIsNull?: boolean, typed?: boolean } = {}): any {
-            return this.fields.map(field => field.getValue({ stateKey, disabledIsNull, typed })).find(value => value != null);
+        getRawValue({ stateKey = null }: { stateKey?: string | null } = {}): any {
+            return this.fieldArray.map(field => field.getRawValue({ stateKey })).find(value => value != null);
+        }
+
+        getValue({ stateKey = null, disabledIsNull = true }: { stateKey?: string | null, disabledIsNull?: boolean } = {}): any {
+            return this.fieldArray.map(field => field.getValue({ stateKey, disabledIsNull })).find(value => value != null);
+        }
+
+        getRawMetaValue(metaKey: string, { stateKey = null }: { stateKey?: string | null } = {}): any {
+            return this.fieldArray.map(field => field.getMetaValue(metaKey, { stateKey })).find(value => value != null);
         }
 
         getMetaValue(metaKey: string, { stateKey = null }: { stateKey?: string | null } = {}): any {
-            return this.fields.map(field => field.getMetaValue(metaKey, { stateKey })).find(value => value != null);
+            return this.fieldArray.map(field => field.getMetaValue(metaKey, { stateKey })).find(value => value != null);
         }
 
-        setValue(value: any, { stateKey = null, typed = true, initiator = null, processChanges = false }: { stateKey?: string | null, typed?: boolean, initiator?: any, processChanges?: boolean } = {}): Set<string> {
-            return this.fields.map(field => field.setValue(value, { stateKey, typed, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
+        setRawValue(value: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, typed?: boolean, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+            return this.fieldArray.map(field => field.setRawValue(value, { stateKey, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
+        }
+
+        setValue(value: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, typed?: boolean, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+            return this.fieldArray.map(field => field.setValue(value, { stateKey, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
+        }
+
+        setRawMetaValue(metaKey: string, value: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
+            return this.fieldArray.map(field => field.setRawMetaValue(metaKey, value, { stateKey, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
 
         setMetaValue(metaKey: string, value: any, { stateKey = null, initiator = null, processChanges = false }: { stateKey?: string | null, initiator?: any, processChanges?: boolean } = {}): Set<string> {
-            return this.fields.map(field => field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
+            return this.fieldArray.map(field => field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges })).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
 
         processChanges(): Set<string> {
-            return this.fields.map(field => field.processChanges()).find(changedNames => changedNames.size !== 0) ?? new Set();
+            return this.fieldArray.map(field => field.processChanges()).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
+    }
+
+    export class FormFieldGroup {
+        constructor(public formGroup: Record<string, FormField | FormFieldArray | FormFieldGroup>) { }
     }
 
     export abstract class FormFieldLinker {
@@ -842,7 +937,7 @@ export namespace Uoyroem {
         }
 
         _syncElementValue(): boolean {
-            const value = this.field.getValue({ typed: false, disabledIsNull: false });
+            const value = this.field.getRawValue();
             const optionsInitialized = this.field.getMetaValue<boolean>("optionsInitialized");
             switch (this.type.asElementType()) {
                 case "select-multiple":
@@ -877,11 +972,11 @@ export namespace Uoyroem {
         }
 
         _syncFieldValue(): void {
-            this.field.setValue(this._getElementValue(), { typed: false, initiator: this, processChanges: true });
+            this.field.setRawValue(this._getElementValue(), { initiator: this, processChanges: true });
         }
 
         _syncElementMeta(metaKey: string): void {
-            const value = this.field.getMetaValue(metaKey);
+            const value = this.field.getRawMetaValue(metaKey);
             switch (metaKey) {
                 case "disabled":
                     this.element.disabled = !!value;
@@ -941,29 +1036,30 @@ export namespace Uoyroem {
         }
 
         _fieldChangesEventListener(event: Event) {
-            const changes = (event as ChangesEvent).changes.filter(change => change.initiator !== this);
-            if (changes.length === 0) return;
-            for (const change of changes) {
-                if (change.type === ChangeType.METAVALUE && change.metaKey === "checked" && change.newValue && change.field.type.asElementType() === "radio") {
-                    const fields = this.list.filter(field => field.type.asElementType() === "radio" && field.name === change.field.name && field !== change.field && field.getMetaValue("checked"));
-                    for (const field of fields) {
-                        field.setMetaValue("checked", false, { initiator: this, processChanges: true });
-                    }
-                }
-            }
-            this.dispatchEvent(new ChangesEvent(changes));
+            this.dispatchEvent(new ChangesEvent((event as ChangesEvent).changes));
         }
 
         add(field: FormField) {
+            field = field.self;
             if (this.list.includes(field)) return false;
+            field.collection = this;
             field.addEventListener("changes", this._fieldChangesEventListener);
             this.list.push(field);
             return true;
         }
 
-        get(fieldName: string): FormField | FormFieldList {
+        remove(field: FormField) {
+            field = field.self;
+            if (!this.list.includes(field)) return false;
+            field.collection = null;
+            field.removeEventListener("changes", this._fieldChangesEventListener);
+            this.list.splice(this.list.indexOf(field), 1);
+            return true;
+        }
+
+        get(fieldName: string): FormField | FormFieldArray {
             const fields = this.list.filter(field => field.name === fieldName)
-            return fields.length === 1 ? fields[0] : new FormFieldList(fields);
+            return fields.length === 1 ? fields[0] : new FormFieldArray(fields);
         }
 
         [Symbol.iterator](): Iterator<string> {
@@ -1032,7 +1128,7 @@ export namespace Uoyroem {
                     continue;
                 }
                 if (element.name === "") continue;
-                const field = new FormField(element.name, FormFieldType.fromFormElement(element), { changeSet: this.changeSet, effectManager: this.effectManager });
+                const field = new FormField(element.name, FormFieldType.fromFormElement(element), { changeSet: this.changeSet, effectManager: this.effectManager, collection: this.fields });
                 const fieldElementLinker = new FormFieldElementLinker(field, element);
                 fieldElementLinker.link();
                 this.fieldLinkers.push(fieldElementLinker);
@@ -1089,7 +1185,7 @@ export namespace Uoyroem {
         }
 
         addComputedFieldEffect(fieldName: string, fieldType: FormFieldType, compute: () => Promise<any> | any, dependsOn: string[]): void {
-            this.fields.add(new FormField(fieldName, fieldType, { changeSet: this.changeSet, effectManager: this.effectManager }))
+            this.fields.add(new FormField(fieldName, fieldType, { changeSet: this.changeSet, effectManager: this.effectManager, collection: this.fields }))
             this.effectManager.addEffect(fieldName, {
                 type: "computed-field",
                 callback: async () => {

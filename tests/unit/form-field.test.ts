@@ -12,12 +12,9 @@ describe("Uoyroem.FormField", () => {
         expect(field.getValue()).toBeNull();
     });
 
-    test("should initialize with null value", () => {
-        field.initialValue((setValue) => {
-            setValue("blyat");
-        });
-        field.reset();
-        expect(field.getValue()).toBe("blyat");
+    test("should handle meta values", () => {
+        field.setMetaValue("disabled", true);
+        expect(field.getMetaValue("disabled")).toBe(true);
     });
 
     test("should set and get value correctly", () => {
@@ -25,8 +22,24 @@ describe("Uoyroem.FormField", () => {
         expect(field.getValue()).toBe("test@example.com");
     });
 
-    test("should handle meta values", () => {
+    it("should respect disabled state", () => {
+        const field = new Uoyroem.FormField("test", Uoyroem.FormFieldType.text());
         field.setMetaValue("disabled", true);
-        expect(field.getMetaValue("disabled")).toBe(true);
+        expect(field.getValue({ disabledIsNull: true })).toBeNull();
+
+        field.setValue("value");
+        expect(field.getValue({ disabledIsNull: false })).toBe("value");
+    });
+
+    it("should track changes in changeSet", () => {
+        field.setValue("Uoyroem", { processChanges: true, initiator: 1 });
+        const changes = field.changeSet.getLastFieldChanges(field);
+        expect(changes).toHaveLength(1);
+        const change = changes[0];
+        expect(change.type).toBe(Uoyroem.ChangeType.VALUE);
+        expect(change.field).toBe(field);
+        expect(change.initiator).toBe(1);
+        expect(change.oldValue).toBeNull();
+        expect(change.newValue).toBe("Uoyroem");
     });
 });

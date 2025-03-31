@@ -1,7 +1,7 @@
 {
   "name": "smart-form",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "lib/index.ts",
   "scripts": {
     "build": "webpack",
     "watch": "webpack --watch",
@@ -9,8 +9,8 @@
     "test": "jest",
     "test:watch": "jest --watch"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["form", "reactive", "dom", "form-dependencies"],
+  "author": "Samat Polatov <uoyroem@gmail.com>",
   "license": "ISC",
   "description": "",
   "devDependencies": {
