@@ -198,3 +198,127 @@ describe('FormField.getAdapter', () => {
         });
     });
 });
+
+
+
+describe('FormField switchState', () => {
+    let formField: Uoyroem.FormField;
+    let textType: Uoyroem.FormFieldType;
+
+    beforeEach(() => {
+        textType = Uoyroem.FormFieldType.text();
+        formField = new Uoyroem.FormField('testField', textType);
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should switch to existing state and update currentStateKey', () => {
+        formField.setValue('value1', { stateKey: 'state1', raw: true });
+        formField.switchState({ stateKey: 'state1' });
+
+        expect(formField['_currentStateKey']).toBe('state1');
+        expect(formField.getValue({ raw: true })).toBe('value1');
+    });
+
+    it('should initialize new state with reset if not initialized', () => {
+        const resetSpy = jest.spyOn(formField, 'reset');
+        formField.switchState({ stateKey: 'newState' });
+
+        expect(formField['_initializedStateKeys'].has('newState')).toBe(true);
+        expect(resetSpy).toHaveBeenCalledWith({ stateKey: 'newState', initiator: null, processChanges: false });
+        expect(formField['_currentStateKey']).toBe('newState');
+        expect(formField.getValue({ stateKey: 'newState', raw: true })).toBeNull();
+    });
+
+    it('should add value change to changeSet when values differ', () => {
+        formField.setValue('defaultValue', { stateKey: 'default', raw: true });
+        formField.setValue('state1Value', { stateKey: 'state1', raw: true });
+
+        const changesBefore = formField.changeSet.getLastFieldChanges(formField).length;
+        formField.switchState({ stateKey: 'state1' });
+
+        const changes = formField.changeSet.getLastFieldChanges(formField);
+        expect(changes.length).toBeGreaterThan(changesBefore);
+        const valueChange = changes.find((c) => c.type === Uoyroem.ChangeType.VALUE);
+        expect(valueChange).toMatchObject({
+            stateKey: 'state1',
+            field: formField,
+            oldValue: 'defaultValue',
+            newValue: 'state1Value',
+            last: true,
+            processed: false,
+        });
+    });
+
+    it('should add meta changes to changeSet when meta values differ', () => {
+        formField.setMetaValue('disabled', false, { stateKey: 'default', raw: true });
+        formField.setMetaValue('disabled', true, { stateKey: 'state1', raw: true });
+
+        const changesBefore = formField.changeSet.getLastFieldChanges(formField).length;
+        formField.switchState({ stateKey: 'state1' });
+
+        const changes = formField.changeSet.getLastFieldChanges(formField);
+        expect(changes.length).toBeGreaterThan(changesBefore);
+        const metaChange = changes.find((c) => c.type === Uoyroem.ChangeType.METAVALUE && c.metaKey === 'disabled');
+        expect(metaChange).toMatchObject({
+            stateKey: 'state1',
+            field: formField,
+            metaKey: 'disabled',
+            oldValue: false,
+            newValue: true,
+            last: true,
+            processed: false,
+        });
+    });
+
+    it('should not add changes if values and meta are equal', () => {
+        formField.setValue('sameValue', { stateKey: 'default', raw: true });
+        formField.setValue('sameValue', { stateKey: 'state1', raw: true });
+        formField.setMetaValue('disabled', false, { stateKey: 'default', raw: true });
+        formField.setMetaValue('disabled', false, { stateKey: 'state1', raw: true });
+
+        const changesBefore = formField.changeSet.getLastFieldChanges(formField).length;
+        formField.switchState({ stateKey: 'state1' });
+
+        const changesAfter = formField.changeSet.getLastFieldChanges(formField).length;
+        expect(changesAfter).toBe(changesBefore);
+    });
+
+    it('should process changes when processChanges is true', () => {
+        formField.setValue('defaultValue', { stateKey: 'default', raw: true });
+        formField.setValue('state1Value', { stateKey: 'state1', raw: true });
+        const processChangesSpy = jest.spyOn(formField, 'processChanges');
+        const listener = jest.fn();
+        formField.addEventListener('changes', listener);
+
+        formField.switchState({ stateKey: 'state1', processChanges: true });
+
+        expect(processChangesSpy).toHaveBeenCalled();
+        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.ChangesEvent));
+        expect(listener.mock.calls[0][0].changedNames).toContain('testField');
+    });
+
+    it('should return changed names without processing when processChanges is false', () => {
+        formField.setValue('defaultValue', { stateKey: 'default', raw: true });
+        formField.setValue('state1Value', { stateKey: 'state1', raw: true });
+        const processChangesSpy = jest.spyOn(formField, 'processChanges');
+
+        const changedNames = formField.switchState({ stateKey: 'state1', processChanges: false });
+
+        expect(processChangesSpy).not.toHaveBeenCalled();
+        expect(changedNames).toContain('testField');
+    });
+
+    it('should set initiator in changes', () => {
+        formField.setValue('defaultValue', { stateKey: 'default', raw: true });
+        formField.setValue('state1Value', { stateKey: 'state1', raw: true });
+
+        formField.switchState({ stateKey: 'state1', initiator: 'testInitiator' });
+
+        const changes = formField.changeSet.getLastFieldChanges(formField);
+        const valueChange = changes.find((c) => c.type === Uoyroem.ChangeType.VALUE);
+        expect(valueChange?.initiator).toBe('testInitiator');
+    });
+});

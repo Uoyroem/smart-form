@@ -252,13 +252,15 @@ export namespace Uoyroem {
             return field.setMetaValue(metaKey, newValue);
         }
 
-        initializeValue(setValue: (value: any) => void): void {
-            setValue(null);
+        getInitialValue(): any {
+            return null;
         }
 
-        initializeMeta(setMetaValue: (metaKey: string, value: any) => void): void {
-            setMetaValue("disabled", false);
-            setMetaValue("dirty", false);
+        getInitialMeta(): Map<string, any> {
+            const meta = new Map();
+            meta.set("disabled", false);
+            meta.set("dirty", false);
+            return meta;
         }
 
         isSameType(otherType: FormFieldType): boolean {
@@ -317,9 +319,10 @@ export namespace Uoyroem {
             return "radio";
         }
 
-        initializeMeta(setMetaValue: (metaKey: string, value: any) => void): void {
-            super.initializeMeta(setMetaValue);
-            setMetaValue("checked", false);
+        getInitialMeta(): Map<string, any> {
+            const meta = super.getInitialMeta();
+            meta.set("checked", false);
+            return meta;
         }
 
         getFieldValue(field: FormField): any {
@@ -340,9 +343,10 @@ export namespace Uoyroem {
             return "checkbox";
         }
 
-        initializeMeta(setMetaValue: (metaKey: string, value: any) => void): void {
-            super.initializeMeta(setMetaValue);
-            setMetaValue("checked", true);
+        getInitialMeta(): Map<string, any> {
+            const meta = super.getInitialMeta();
+            meta.set("checked", false);
+            return meta;
         }
 
         getFieldValue(field: FormField): any {
@@ -374,9 +378,10 @@ export namespace Uoyroem {
             return this._multiple ? "select-multiple" : "select-one";
         }
 
-        initializeMeta(setMetaValue: (metaKey: string, value: any) => void): void {
-            super.initializeMeta(setMetaValue);
-            setMetaValue("optionsInitialized", false);
+        getInitialMeta(): Map<string, any> {
+            const meta = super.getInitialMeta();
+            meta.set("optionsInitialized", false);
+            return meta;
         }
 
         multiple(value: boolean = true): this {
@@ -448,6 +453,15 @@ export namespace Uoyroem {
         }
 
         add(change: Change): void {
+            let lastChange = null;
+            if (change.type === ChangeType.VALUE) {
+                lastChange = this.findLast(lastChange => lastChange.field === change.field && lastChange.type === ChangeType.VALUE);
+            } else if (change.type === ChangeType.METAVALUE) {
+                lastChange = this.findLast(lastChange => lastChange.field === change.field && lastChange.type === ChangeType.METAVALUE && lastChange.metaKey === change.metaKey);
+            }
+            if (lastChange) {
+                lastChange.last = false;
+            }
             this._changes.push(change);
             if (this._changes.length > this._maxSize) {
                 const index = this._changes.findIndex(c => c.processed);
@@ -536,17 +550,15 @@ export namespace Uoyroem {
             this._initializedStateKeys = new Set();
             this._currentStateKey = "default";
 
-            this._initialValue = null;
-            this.initialValue(setValue => type.initializeValue(setValue));
+            this._initialValue = this.type.getInitialValue();
             this._valueMap = new Map();
 
-            this._initialMeta = new Map();
-            this.initialMeta(setMetaValue => type.initializeMeta(setMetaValue), false);
+            this._initialMeta = this.type.getInitialMeta();
             this._metaMap = new Map();
 
             this._changeSet = changeSet ?? new FormFieldChangeSet(32);
 
-            this.switchState("default");
+            this.switchState({ stateKey: "default" });
             if (effectManager != null) {
                 this.initializeDependencies(effectManager);
             }
@@ -578,40 +590,68 @@ export namespace Uoyroem {
             return this._type;
         }
 
-        initialValue(callback: (setValue: (value: any) => void) => void): void {
-            callback(value => {
-                this._initialValue = value;
-            });
+        clearInitialMeta(): void {
+            this._initialMeta = new Map();
         }
 
-        initialMeta(callback: (setValue: (metaKey: string, value: any) => void) => void, clear = false): void {
-            if (clear) {
-                this._initialMeta = new Map();
-            }
-
-            callback((metaKey, value) => {
-                this._initialMeta.set(metaKey, value);
-            });
-        }
-
-        reset({ stateKey = null, initiator = null }: { stateKey?: string | null, initiator?: any } = {}) {
+        reset({ stateKey = null, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
             stateKey ??= this._currentStateKey;
-
-            this._valueMap.set(stateKey, null);
-            this._metaMap.set(stateKey, new Map());
             this.setValue(this._initialValue, { raw: true, stateKey, initiator });
             for (const [metaKey, value] of this._initialMeta.entries()) {
                 this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
             }
-            return this.processChanges();
+            return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames(this.changeSet.getLastFieldChanges(this));
         }
 
-        switchState(stateKey: string) {
+        initializeState({ stateKey, initiator = null }: FormFieldContext & { stateKey: string }): void {
             if (!this._initializedStateKeys.has(stateKey)) {
                 this._initializedStateKeys.add(stateKey);
-                this.reset({ stateKey });
+                this._metaMap.set(stateKey, new Map());
+                this.reset({ stateKey, initiator, processChanges: false });
             }
+        }
+
+        switchState({ stateKey, initiator = null, processChanges = false }: FormFieldContext & { stateKey: string }): Set<string> {
+            this.initializeState({ stateKey, initiator });
+
+            const oldValue = this._valueMap.get(this._currentStateKey);
+            const newValue = this._valueMap.get(stateKey);
+            if (!this.type.isEqual(oldValue, newValue)) {
+                const change: Change = {
+                    stateKey,
+                    type: ChangeType.VALUE,
+                    field: this,
+                    initiator,
+                    oldValue,
+                    newValue,
+                    date: new Date(),
+                    last: true,
+                    processed: false
+                };
+                this.changeSet.add(change);
+            }
+
+            for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
+                const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
+                if (oldValue !== newValue) {
+                    const change: Change = {
+                        stateKey,
+                        type: ChangeType.METAVALUE,
+                        field: this,
+                        initiator,
+                        metaKey,
+                        oldValue,
+                        newValue,
+                        date: new Date(),
+                        last: true,
+                        processed: false
+                    };
+                    this.changeSet.add(change);
+                }
+            }
+
             this._currentStateKey = stateKey;
+            return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames(this.changeSet.getLastFieldChanges(this));
         }
 
         /**
@@ -664,17 +704,18 @@ export namespace Uoyroem {
             return this.type.getFieldValue(this.getAdapter({ stateKey, raw: true }));
         }
 
-        setValue(newValue: any, { stateKey = null, raw = false, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
+        setValue(newValue: any, { stateKey = null, raw = false, asInitial = false, initiator = null, processChanges = false }: FormFieldContext & { asInitial?: boolean } = {}): Set<string> {
+            if (asInitial) {
+                this._initialValue = newValue;
+                return new Set();
+            }
             if (raw) {
                 initiator ??= this;
                 stateKey ??= this._currentStateKey;
+                this.initializeState({ stateKey, initiator });
                 const oldValue = this.getValue({ stateKey, raw: true });
                 if (this.type.isEqual(oldValue, newValue)) return new Set();
                 this._valueMap.set(stateKey, newValue);
-                const lastChange = this.changeSet.findLast(change => change.field === this && change.type === ChangeType.VALUE);
-                if (lastChange) {
-                    lastChange.last = false;
-                }
                 const change: Change = {
                     stateKey,
                     type: ChangeType.VALUE,
@@ -702,21 +743,18 @@ export namespace Uoyroem {
             return this.type.getFieldMetaValue(this.getAdapter({ raw: true, stateKey }), metaKey);
         }
 
-        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
+        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, asInitial = false, processChanges = false, raw = false }: FormFieldContext & { asInitial?: boolean } = {}): Set<string> {
+            if (asInitial) {
+                this._initialMeta.set(metaKey, newValue);
+                return new Set();
+            }
             if (raw) {
                 initiator ??= this;
                 stateKey ??= this._currentStateKey;
-
-                if (!this._metaMap.has(stateKey)) this.reset({ stateKey: stateKey });
-
+                this.initializeState({ stateKey, initiator });
                 const oldValue = this.getMetaValue(metaKey, { stateKey });
                 if (oldValue === newValue) return new Set();
                 this._metaMap.get(stateKey)!.set(metaKey, newValue);
-                const lastChange = this.changeSet.findLast(change => change.field === this && change.type === ChangeType.METAVALUE && change.metaKey === metaKey);
-                if (lastChange != null) {
-                    lastChange.last = false;
-                }
-                initiator ??= this;
                 const change: Change = {
                     stateKey,
                     type: ChangeType.METAVALUE,
@@ -827,7 +865,7 @@ export namespace Uoyroem {
                     if (mutation.type === "attributes") {
                         switch (mutation.attributeName) {
                             case "disabled":
-                                this.field.setMetaValue("disabled", this.element.disabled);
+                                this._syncFieldMeta("disabled");
                                 break;
                         }
                     }
@@ -836,15 +874,12 @@ export namespace Uoyroem {
         }
 
         override link(): void {
-            this.field.initialValue(setValue => {
-                setValue(this._getElementValue());
-            });
-            this.field.initialMeta(setMetaValue => {
-                setMetaValue("disabled", this._getElementMetaValue("disabled"));
-                if (["radio", "checkbox"].includes(this.type.asElementType())) {
-                    setMetaValue("checked", this._getElementMetaValue("checked"));
-                }
-            });
+            this.field.setValue(this._getElementValue(), { asInitial: true });
+            this.field.setMetaValue("disabled", this._getElementMetaValue("disabled"), { asInitial: true });
+            this.field.setMetaValue("visible", true, { asInitial: true });
+            if (["radio", "checkbox"].includes(this.type.asElementType())) {
+                this.field.setMetaValue("checked", this._getElementMetaValue("checked"), { asInitial: true });
+            }
             this.field.reset();
             this.field.addEventListener("changes", this._fieldChangesEventListener);
 
