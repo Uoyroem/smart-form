@@ -708,7 +708,7 @@ export namespace Uoyroem {
                 stateKey ??= this._currentStateKey;
 
                 if (!this._metaMap.has(stateKey)) this.reset({ stateKey: stateKey });
-                
+
                 const oldValue = this.getMetaValue(metaKey, { stateKey });
                 if (oldValue === newValue) return new Set();
                 this._metaMap.get(stateKey)!.set(metaKey, newValue);
@@ -947,14 +947,20 @@ export namespace Uoyroem {
                     const container = this.element.parentElement;
                     if (container != null) {
                         if (value) {
-                            container.style.display = "";
-                            requestAnimationFrame(() => {
+                            if (container.style.display === "none") {
+                                container.style.display = "";
+                                requestAnimationFrame(() => {
+                                    container.dataset.visible = "true";
+                                });
+                            } else {
                                 container.dataset.visible = "true";
-                            });
+                            }
                         } else {
-                            container.addEventListener("transitionend", (event) => {
-                                container.style.display = "none";
-                            }, { once: true });
+                            if (container.style.display !== "none") {
+                                container.addEventListener("transitionend", (event) => {
+                                    container.style.display = "none";
+                                }, { once: true });
+                            }
                             container.dataset.visible = "false";
                         }
                     }
