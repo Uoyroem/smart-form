@@ -238,7 +238,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.ChangeType.VALUE });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -252,7 +252,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.ChangeType.META_VALUE, metaKey: "disabled" });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.MetaValue, metaKey: "disabled" });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -283,8 +283,8 @@ describe('FormField switchState', () => {
         formField.switchState({ stateKey: 'state1', processChanges: true });
 
         expect(processChangesSpy).toHaveBeenCalled();
-        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.ChangesEvent));
-        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.Change) => change.field.name === "testField")).toBeTruthy();
+        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.FormFieldChangesEvent));
+        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.FormFieldChange) => change.field.name === "testField")).toBeTruthy();
     });
 
     it('should return changed names with dry processing when processChanges', () => {
@@ -304,7 +304,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1', initiator: 'testInitiator' });
 
-        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.ChangeType.VALUE })!;
+        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value })!;
         expect(valueChange.initiator).toBe('testInitiator');
     });
 });

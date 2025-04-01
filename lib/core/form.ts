@@ -170,6 +170,18 @@ export namespace Uoyroem {
 
     export type FormElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
+    export enum FormFieldTypeElementStatus {
+        VALUE_SUCCESSFULLY_RECEIVED = "value-successfully-received",
+        VALUE_SET_SUCCESS = "value-set-success",
+        META_VALUE_SUCCESSFULLY_RECEIVED = "meta-value-successfully-received",
+        META_VALUE_SET_SUCCESS = "meta-value-set-success",
+        FAILED_TO_SET_VALUE = "failed-to-set-value",
+        FAILED_TO_SET_META_VALUE = "failed-to-set-meta-value",
+        INVALID_ELEMENT = "invalid-element",
+        TYPE_MISMATCH = "type-mismatch",
+        META_KEY_NOT_EXISTS = "meta-key-not-exists"
+    }
+
     export class FormFieldType {
         static object() {
             return new FormFieldTypeObject();
@@ -236,6 +248,9 @@ export namespace Uoyroem {
         isEmpty() { }
         asElementType() { return "hidden"; }
 
+        fetch() {
+        }
+
         getFieldValue(field: FormField): any {
             return field.getValue();
         }
@@ -250,6 +265,54 @@ export namespace Uoyroem {
 
         setFieldMetaValue(field: FormField, metaKey: string, newValue: any): Set<string> {
             return field.setMetaValue(metaKey, newValue);
+        }
+
+        getElementValue(element: Element): [any, FormFieldTypeElementStatus] {
+            if (!FormFieldType.isFormElement(element)) {
+                return [null, FormFieldTypeElementStatus.INVALID_ELEMENT];
+            }
+            if (element.type !== this.asElementType()) {
+                return [null, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            }
+            return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        }
+
+        setElementValue(element: Element, newValue: any): FormFieldTypeElementStatus {
+            if (!FormFieldType.isFormElement(element)) {
+                return FormFieldTypeElementStatus.INVALID_ELEMENT;
+            }
+            if (element.type !== this.asElementType()) {
+                return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            }
+            element.value = newValue;
+            return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
+        }
+
+        getElementMetaValue(element: Element, metaKey: string): [any, FormFieldTypeElementStatus] {
+            if (!FormFieldType.isFormElement(element)) {
+                return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
+            }
+            if (element.type !== this.asElementType()) {
+                return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            }
+            if (metaKey === "disabled") {
+                return [element.disabled, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            }
+            return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS]
+        }
+
+        setElementMetaValue(element: Element, metaKey: string, newValue: any): FormFieldTypeElementStatus {
+            if (!FormFieldType.isFormElement(element)) {
+                return FormFieldTypeElementStatus.INVALID_ELEMENT;
+            }
+            if (element.type !== this.asElementType()) {
+                return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            }
+            if (metaKey === "disabled") {
+                element.disabled = Boolean(newValue);
+                return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            }
+            return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
         }
 
         getInitialValue(): any {
@@ -287,6 +350,7 @@ export namespace Uoyroem {
     }
 
     export class FormFieldTypeNumber extends FormFieldType {
+        private _precision: number = 2;
         constructor() {
             super("Number");
         }
@@ -325,12 +389,33 @@ export namespace Uoyroem {
             return meta;
         }
 
-        getFieldValue(field: FormField): any {
+        override getFieldValue(field: FormField): any {
             return field.getMetaValue("checked") ? field.getValue() : null;
         }
 
-        setFieldValue(field: FormField, newValue: any): any {
+        override setFieldValue(field: FormField, newValue: any): any {
             return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
+        }
+
+        override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
+            const [value, status] = super.getElementMetaValue(element, metaKey);
+            if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+                return [value, status];
+            }
+            if (metaKey === "checked") {
+                return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            }
+            return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
+        }
+
+        override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
+            const status = super.setElementMetaValue(element, metaKey, newValue);
+            if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
+            if (metaKey === "checked") {
+                element.checked = Boolean(newValue);
+                return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            }
+            return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
         }
     }
 
@@ -349,15 +434,36 @@ export namespace Uoyroem {
             return meta;
         }
 
-        getFieldValue(field: FormField): any {
+        override getFieldValue(field: FormField): any {
             const value = field.getValue();
             if (["", "on"].includes(value)) return field.getMetaValue("checked");
             return field.getMetaValue("checked") ? value : null;
         }
 
-        setFieldValue(field: FormField, newValue: any): any {
+        override setFieldValue(field: FormField, newValue: any): any {
             if (["", "on"].includes(field.getValue())) return field.setMetaValue("checked", newValue);
             return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
+        }
+
+        override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
+            const [value, status] = super.getElementMetaValue(element, metaKey);
+            if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+                return [value, status];
+            }
+            if (metaKey === "checked") {
+                return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            }
+            return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
+        }
+
+        override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
+            const status = super.setElementMetaValue(element, metaKey, newValue);
+            if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
+            if (metaKey === "checked") {
+                element.checked = Boolean(newValue);
+                return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            }
+            return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
         }
     }
 
@@ -393,6 +499,43 @@ export namespace Uoyroem {
             this._of = type;
             return this;
         }
+
+        override getElementValue(element: HTMLSelectElement): [any, FormFieldTypeElementStatus] {
+            if (!FormFieldType.isFormElement(element)) {
+                return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
+            }
+            if (element.type !== this.asElementType()) {
+                return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            }
+            if (this._multiple) {
+                return [Array.from(element.selectedOptions, option => option.value), FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+            }
+            return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        }
+
+        override setElementValue(element: HTMLSelectElement, newValue: any): FormFieldTypeElementStatus {
+            if (!FormFieldType.isFormElement(element)) {
+                return FormFieldTypeElementStatus.INVALID_ELEMENT;
+            }
+            if (element.type !== this.asElementType()) {
+                return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            }
+            let options: (HTMLOptionElement | null)[];
+            if (this._multiple) {
+                options = newValue.map((value: any): HTMLOptionElement | null => {
+                    return element.querySelector(`option[value="${value}"]`);
+                });
+            } else {
+                options = [
+                    element.querySelector(`option[value="${newValue}"]`)
+                ]
+            }
+            if (options.some(option => option == null)) return FormFieldTypeElementStatus.FAILED_TO_SET_VALUE;
+            (options as HTMLOptionElement[]).forEach(option => {
+                option.selected = true;
+            });
+            return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
+        }
     }
 
     export class FormFieldTypeObject extends FormFieldType {
@@ -405,14 +548,14 @@ export namespace Uoyroem {
         }
     }
 
-    export enum ChangeType {
-        VALUE = "value",
-        META_VALUE = "metavalue"
+    export enum FormFieldChangeType {
+        Value,
+        MetaValue
     }
 
-    export interface ValueChange {
+    export interface FormFieldValueChange {
         stateKey: string;
-        type: ChangeType.VALUE;
+        type: FormFieldChangeType.Value;
         field: FormField;
         oldValue: any;
         newValue: any;
@@ -422,9 +565,9 @@ export namespace Uoyroem {
         date: Date;
     }
 
-    export interface MetaValueChange {
+    export interface FormFieldMetaValueChange {
         stateKey: string;
-        type: ChangeType.META_VALUE;
+        type: FormFieldChangeType.MetaValue;
         field: FormField;
         metaKey: string;
         oldValue: any;
@@ -435,38 +578,38 @@ export namespace Uoyroem {
         date: Date;
     }
 
-    export type Change = ValueChange | MetaValueChange;
+    export type FormFieldChange = FormFieldValueChange | FormFieldMetaValueChange;
 
-    export class ChangesEvent extends Event {
-        constructor(public changes: Change[]) {
+    export class FormFieldChangesEvent extends Event {
+        constructor(public changes: FormFieldChange[]) {
             super("changes", { cancelable: true });
         }
     }
 
-    interface ChangeFilter {
-        type?: ChangeType | null;
+    interface FormFieldChangeFilter {
+        type?: FormFieldChangeType | null;
         onlyCurrentState?: boolean;
         last?: boolean | null;
         processed?: boolean | null;
     }
 
-    interface AnyChangeFilter extends ChangeFilter {
-        type?: ChangeType | null;
+    interface FormFieldAnyChangeFilter extends FormFieldChangeFilter {
+        type?: FormFieldChangeType | null;
         metaKey?: never;
     }
 
-    interface ValueChangeFilter extends ChangeFilter {
-        type: ChangeType.VALUE;
+    interface FormFieldValueChangeFilter extends FormFieldChangeFilter {
+        type: FormFieldChangeType.Value;
         metaKey?: never;
     }
 
-    interface MetaValueChangeFilter extends ChangeFilter {
-        type: ChangeType.META_VALUE;
+    interface FormFieldMetaValueChangeFilter extends FormFieldChangeFilter {
+        type: FormFieldChangeType.MetaValue;
         metaKey?: string | null;
     }
 
     export class FormFieldChangeSet {
-        private _changes: Change[];
+        private _changes: FormFieldChange[];
         private _maxSize: number;
 
         constructor(maxSize = 128) {
@@ -482,12 +625,12 @@ export namespace Uoyroem {
             }
         }
 
-        add(change: Change): void {
-            let lastChange: Change | undefined | null = null;
-            if (change.type === ChangeType.VALUE) {
-                lastChange = this.getFieldChange(change.field, { type: ChangeType.VALUE });
-            } else if (change.type === ChangeType.META_VALUE) {
-                lastChange = this.getFieldChange(change.field, { type: ChangeType.META_VALUE, metaKey: change.metaKey });
+        add(change: FormFieldChange): void {
+            let lastChange: FormFieldChange | undefined | null = null;
+            if (change.type === FormFieldChangeType.Value) {
+                lastChange = this.getFieldChange(change.field, { type: FormFieldChangeType.Value });
+            } else if (change.type === FormFieldChangeType.MetaValue) {
+                lastChange = this.getFieldChange(change.field, { type: FormFieldChangeType.MetaValue, metaKey: change.metaKey });
             }
             if (lastChange != null) {
                 lastChange.last = false;
@@ -496,25 +639,25 @@ export namespace Uoyroem {
             this.trimProcessedChanges();
         }
 
-        remove(change: Change): void {
+        remove(change: FormFieldChange): void {
             this._changes.splice(this._changes.indexOf(change), 1);
         }
 
-        getFieldChange(field: FormField, filter: ValueChangeFilter): ValueChange | undefined;
-        getFieldChange(field: FormField, filter: MetaValueChangeFilter): MetaValueChange | undefined;
-        getFieldChange(field: FormField, filter: AnyChangeFilter): Change | undefined;
-        getFieldChange(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null, metaKey = null }: AnyChangeFilter | ValueChangeFilter | MetaValueChangeFilter = {}): Change | undefined {
+        getFieldChange(field: FormField, filter: FormFieldValueChangeFilter): FormFieldValueChange | undefined;
+        getFieldChange(field: FormField, filter: FormFieldMetaValueChangeFilter): FormFieldMetaValueChange | undefined;
+        getFieldChange(field: FormField, filter: FormFieldAnyChangeFilter): FormFieldChange | undefined;
+        getFieldChange(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null, metaKey = null }: FormFieldAnyChangeFilter | FormFieldValueChangeFilter | FormFieldMetaValueChangeFilter = {}): FormFieldChange | undefined {
             let changes = this.getFieldChanges(field, { onlyCurrentState, last, processed, type });
-            if (type === ChangeType.META_VALUE && metaKey != null) {
-                changes = (changes as MetaValueChange[]).filter(change => change.metaKey === metaKey);
+            if (type === FormFieldChangeType.MetaValue && metaKey != null) {
+                changes = (changes as FormFieldMetaValueChange[]).filter(change => change.metaKey === metaKey);
             }
             return changes.at(-1);
         }
 
-        getFieldChanges(field: FormField, filter?: ValueChangeFilter): ValueChange[];
-        getFieldChanges(field: FormField, filter?: MetaValueChangeFilter): MetaValueChange[];
-        getFieldChanges(field: FormField, filter?: AnyChangeFilter): Change[];
-        getFieldChanges(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null }: AnyChangeFilter | ValueChangeFilter | MetaValueChangeFilter = {}): Change[] {
+        getFieldChanges(field: FormField, filter?: FormFieldValueChangeFilter): FormFieldValueChange[];
+        getFieldChanges(field: FormField, filter?: FormFieldMetaValueChangeFilter): FormFieldMetaValueChange[];
+        getFieldChanges(field: FormField, filter?: FormFieldAnyChangeFilter): FormFieldChange[];
+        getFieldChanges(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null }: FormFieldAnyChangeFilter | FormFieldValueChangeFilter | FormFieldMetaValueChangeFilter = {}): FormFieldChange[] {
             let changes = this._changes.filter(change => change.field === field);
             if (type != null) { changes = changes.filter(change => change.type === type); }
             if (last != null) { changes = changes.filter(change => change.last === last); }
@@ -527,22 +670,22 @@ export namespace Uoyroem {
             return this.getFieldChanges(field, { onlyCurrentState: true, last: true }).length !== 0;
         }
 
-        markProcessed(changes: Change[]): void {
+        markProcessed(changes: FormFieldChange[]): void {
             changes.forEach(change => { change.processed = true; });
             this.trimProcessedChanges();
         }
 
-        static asChangedName(change: Change): string | null {
-            if (change.type === "value") {
+        static asChangedName(change: FormFieldChange): string | null {
+            if (change.type === FormFieldChangeType.Value) {
                 return change.field.name;
             }
-            if (change.type === "metavalue") {
+            if (change.type === FormFieldChangeType.MetaValue) {
                 return getMetaDependencyKey(change.field.name, change.metaKey);
             }
             return null;
         }
 
-        static asChangedNames(changes: Change[]): Set<string> {
+        static asChangedNames(changes: FormFieldChange[]): Set<string> {
             const changedNames = new Set<string>();
             for (const change of changes) {
                 const changedName = this.asChangedName(change);
@@ -552,11 +695,11 @@ export namespace Uoyroem {
             return changedNames;
         }
 
-        processChanges(field: FormField, type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+        processChanges(field: FormField, type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
             const lastChanges = this.getFieldChanges(field, { onlyCurrentState: true, type });
             if (!dryRun) {
                 this.markProcessed(this.getFieldChanges(field, { onlyCurrentState: true, last: null, type }));
-                field.dispatchEvent(new ChangesEvent(lastChanges));
+                field.dispatchEvent(new FormFieldChangesEvent(lastChanges));
             }
             return FormFieldChangeSet.asChangedNames(lastChanges);
         }
@@ -661,9 +804,9 @@ export namespace Uoyroem {
             const oldValue = this._valueMap.get(this._currentStateKey);
             const newValue = this._valueMap.get(stateKey);
             if (!this.type.isEqual(oldValue, newValue)) {
-                const change: Change = {
+                const change: FormFieldChange = {
                     stateKey,
-                    type: ChangeType.VALUE,
+                    type: FormFieldChangeType.Value,
                     field: this,
                     initiator,
                     oldValue,
@@ -678,9 +821,9 @@ export namespace Uoyroem {
             for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
                 const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
                 if (oldValue !== newValue) {
-                    const change: Change = {
+                    const change: FormFieldChange = {
                         stateKey,
-                        type: ChangeType.META_VALUE,
+                        type: FormFieldChangeType.MetaValue,
                         field: this,
                         initiator,
                         metaKey,
@@ -761,9 +904,9 @@ export namespace Uoyroem {
                 const oldValue = this.getValue({ stateKey, raw: true });
                 if (this.type.isEqual(oldValue, newValue)) return new Set();
                 this._valueMap.set(stateKey, newValue);
-                const change: Change = {
+                const change: FormFieldChange = {
                     stateKey,
-                    type: ChangeType.VALUE,
+                    type: FormFieldChangeType.Value,
                     field: this,
                     initiator,
                     oldValue,
@@ -774,7 +917,7 @@ export namespace Uoyroem {
                 };
                 console.log("[FormField.setValue] Value changed:", { oldValue, newValue, stateKey });
                 this.changeSet.add(change);
-                return this.processChanges(ChangeType.VALUE, !processChanges);
+                return this.processChanges(FormFieldChangeType.Value, !processChanges);
             }
             return this.type.setFieldValue(this.getAdapter({ stateKey, raw: true, processChanges, initiator }), newValue);
         }
@@ -801,9 +944,9 @@ export namespace Uoyroem {
                 const oldValue = this.getMetaValue(metaKey, { stateKey });
                 if (oldValue === newValue) return new Set();
                 this._metaMap.get(stateKey)!.set(metaKey, newValue);
-                const change: Change = {
+                const change: FormFieldChange = {
                     stateKey,
-                    type: ChangeType.META_VALUE,
+                    type: FormFieldChangeType.MetaValue,
                     field: this,
                     initiator,
                     metaKey,
@@ -815,12 +958,12 @@ export namespace Uoyroem {
                 };
                 this.changeSet.add(change);
                 console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
-                return this.processChanges(ChangeType.META_VALUE, !processChanges);
+                return this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
             }
             return this.type.setFieldMetaValue(this.getAdapter({ stateKey, raw: true, initiator, processChanges }), metaKey, newValue);
         }
 
-        processChanges(type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+        processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
             return this.changeSet.processChanges(this, type, dryRun);
         }
     }
@@ -870,7 +1013,7 @@ export namespace Uoyroem {
             return this.fieldArray.map(field => field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges, raw })).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
 
-        processChanges(type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+        processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
             return this.fieldArray.map(field => field.processChanges(type, dryRun)).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
     }
@@ -924,6 +1067,7 @@ export namespace Uoyroem {
             this.field.setInitialValue(this._getElementValue());
             this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"));
             this.field.setInitialMetaValue("visible", true);
+            this.field.setInitialMetaValue("container", this.element.parentElement);
             if (["radio", "checkbox"].includes(this.type.asElementType())) {
                 this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
             }
@@ -968,52 +1112,32 @@ export namespace Uoyroem {
         }
 
         _fieldChangesEventListener(event: Event) {
-            const changes = (event as ChangesEvent).changes.filter(change => change.initiator !== this);
+            const changes = (event as FormFieldChangesEvent).changes.filter(change => change.initiator !== this);
             for (const change of changes) {
-                if (change.type === ChangeType.VALUE) {
-                    if (!this._syncElementValue()) {
-                        this._syncFieldValue();
-                    }
-                } else if (change.type === ChangeType.META_VALUE) {
+                if (change.type === FormFieldChangeType.Value) {
+                    this._syncElementValue();
+                } else if (change.type === FormFieldChangeType.MetaValue) {
                     this._syncElementMetaValue(change.metaKey);
                 }
             }
         }
 
-        _syncElementValue(): boolean {
+        _syncElementValue(): void {
             console.log("[FormFieldElementLinker._syncElementValue] Syncing element value");
             const value = this.field.getValue({ raw: true });
-            const optionsInitialized = this.field.getMetaValue("optionsInitialized");
-            switch (this.type.asElementType()) {
-                case "select-multiple":
-                    if (!optionsInitialized) {
-                        // console.log("PENDING OPTIONS INITIALIZE", value);
-                        return true;
-                    }
-                    const options = (value as any[]).map((value: any) => {
-                        return this.element.querySelector<HTMLOptionElement>(`option[value="${value}"]`);
-                    });
-                    if (options.some(option => option == null)) {
-                        return false;
-                    }
-                    options.forEach(option => { option!.selected = true; });
-                    return true;
-                case "select-one":
-                    if (!optionsInitialized) {
-                        // console.log("PENDING OPTIONS INITIALIZE", value);
-                        return true;
-                    }
-                    const option = this.element.querySelector<HTMLOptionElement>(`option[value="${value}"]`);
-                    if (option == null) return false;
-                    option.selected = true;
-                    return true;
+            const status = this.type.setElementValue(this.element, value);
+            if (status !== FormFieldTypeElementStatus.VALUE_SET_SUCCESS) {
+                console.log("[FormFieldElementLinker._syncElementMetaValue] Failed to set element value, status `%s`", status);
+                return;
             }
-            this.element.value = value;
-            return true;
         }
 
-        _getElementValue(): string {
-            return this.element.value;
+        _getElementValue(): any {
+            const [value, status] = this.type.getElementValue(this.element);
+            if (status !== FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED) {
+                console.warn("[FormFieldElementLinker._getElementValue] Failed to get value from element, status `%s`", status);
+            }
+            return value;
         }
 
         _syncFieldValue(): void {
@@ -1023,18 +1147,15 @@ export namespace Uoyroem {
 
         _syncElementMetaValue(metaKey: string): void {
             console.log("[FormFieldElementLinker._syncElementMetaValue] Syncing element meta value");
-
             const value = this.field.getMetaValue(metaKey, { raw: true });
-            switch (metaKey) {
-                case "disabled":
-                    this.element.disabled = !!value;
-                    break;
-                case "checked":
-                    (this.element as HTMLInputElement).checked = !!value;
-                    break;
-                case "visible":
-                    const container = this.element.parentElement;
-                    if (container != null) {
+            const status = this.type.setElementMetaValue(this.element, metaKey, value);
+            if (status === FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS) {
+                return;
+            }
+            if (status === FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+                switch (metaKey) {
+                    case "visible":
+                        const container = this.field.getMetaValue("container") as HTMLElement;
                         if (this._handleHideContainer != null) {
                             container.removeEventListener("transitionend", this._handleHideContainer);
                             this._handleHideContainer = null;
@@ -1057,27 +1178,29 @@ export namespace Uoyroem {
                             }
                             container.dataset.visible = "false";
                         }
-                    }
-                    break;
-                case "autofill":
-                    this.element.classList.toggle("autofill", !!value);
-                    break;
-                case "optionsInitialized":
-                    // console.log("options initialized", !!value);
-                    if (value) {
-                        this._syncElementValue();
-                    }
-                    break;
+                        break;
+                    case "autofill":
+                        this.element.classList.toggle("autofill", !!value);
+                        break;
+                    case "optionsInitialized":
+                        // console.log("options initialized", !!value);
+                        if (value) {
+                            this._syncElementValue();
+                        }
+                        break;
+                }
+                return;
             }
+
+            console.log("[FormFieldElementLinker._syncElementMetaValue] Failed to set element meta value, status `%s`", status);
         }
 
         _getElementMetaValue(metaKey: string): any {
-            switch (metaKey) {
-                case "disabled":
-                    return this.element.disabled;
-                case "checked":
-                    return (this.element as HTMLInputElement).checked;
+            const [value, status] = this.type.getElementMetaValue(this.element, metaKey);
+            if (status !== FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED) {
+                console.warn("[FormFieldElementLinker._getElementMetaValue] Failed to get value from element, status `%s`", status);
             }
+            return value;
         }
 
         _syncFieldMetaValue(metaKey: string): void {
@@ -1096,7 +1219,7 @@ export namespace Uoyroem {
         }
 
         _fieldChangesEventListener(event: Event) {
-            this.dispatchEvent(new ChangesEvent((event as ChangesEvent).changes));
+            this.dispatchEvent(new FormFieldChangesEvent((event as FormFieldChangesEvent).changes));
         }
 
         add(field: FormField) {
@@ -1131,15 +1254,15 @@ export namespace Uoyroem {
     }
 
     export abstract class FormChangesManager {
-        abstract manage(form: Form, changes: Change[]): void;
+        abstract manage(form: Form, changes: FormFieldChange[]): void;
     }
 
     export class FormChangesForRadioManager extends FormChangesManager {
-        override manage(form: Form, changes: Change[]): void {
+        override manage(form: Form, changes: FormFieldChange[]): void {
             changes.filter(change =>
                 change.initiator !== form &&
                 change.field.type.asElementType() === "radio" &&
-                change.type === ChangeType.META_VALUE &&
+                change.type === FormFieldChangeType.MetaValue &&
                 change.metaKey === "checked" &&
                 change.newValue
             ).forEach(change => {
@@ -1156,7 +1279,7 @@ export namespace Uoyroem {
     }
 
     export class FormChangesForTriggerEffectsManager extends FormChangesManager {
-        override manage(form: Form, changes: Change[]): void {
+        override manage(form: Form, changes: FormFieldChange[]): void {
             changes = changes.filter(change => change.initiator !== form);
             if (changes.length === 0) return;
             form.effectManager.triggerEffects({ changedNames: FormFieldChangeSet.asChangedNames(changes) });
@@ -1205,7 +1328,7 @@ export namespace Uoyroem {
         }
 
         _handleChanges(event: Event) {
-            const changes = (event as ChangesEvent).changes;
+            const changes = (event as FormFieldChangesEvent).changes;
             for (const changesManager of this._changesManagers) {
                 changesManager.manage(this, changes);
             }

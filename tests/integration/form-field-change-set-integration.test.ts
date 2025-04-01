@@ -14,12 +14,12 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('initial', { raw: true });
 
         // 2. Проверяем, что изменение есть в ChangeSet
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.VALUE });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.newValue).toBe("initial");
         expect(change.processed).toBe(false);
-        
+
         // 3. Обрабатываем изменения
         const changedNames = field.processChanges();
 
@@ -33,7 +33,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         const changedNames = field.setMetaValue('disabled', true, { raw: true });
         expect(changedNames).toEqual(new Set(['test:disabled']));
 
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.META_VALUE });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.MetaValue });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.metaKey).toBe('disabled');
@@ -45,7 +45,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('second', { raw: true });
 
         // 2. Получаем ТОЛЬКО последнее изменение
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.VALUE });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.newValue).toBe("second");
