@@ -407,7 +407,7 @@ export namespace Uoyroem {
 
     export enum ChangeType {
         VALUE = "value",
-        METAVALUE = "metavalue"
+        META_VALUE = "metavalue"
     }
 
     export interface ValueChange {
@@ -424,7 +424,7 @@ export namespace Uoyroem {
 
     export interface MetaValueChange {
         stateKey: string;
-        type: ChangeType.METAVALUE;
+        type: ChangeType.META_VALUE;
         field: FormField;
         metaKey: string;
         oldValue: any;
@@ -443,6 +443,28 @@ export namespace Uoyroem {
         }
     }
 
+    interface ChangeFilter {
+        type?: ChangeType | null;
+        onlyCurrentState?: boolean;
+        last?: boolean | null;
+        processed?: boolean | null;
+    }
+
+    interface AnyChangeFilter extends ChangeFilter {
+        type?: ChangeType | null;
+        metaKey?: never;
+    }
+
+    interface ValueChangeFilter extends ChangeFilter {
+        type: ChangeType.VALUE;
+        metaKey?: never;
+    }
+
+    interface MetaValueChangeFilter extends ChangeFilter {
+        type: ChangeType.META_VALUE;
+        metaKey?: string | null;
+    }
+
     export class FormFieldChangeSet {
         private _changes: Change[];
         private _maxSize: number;
@@ -452,47 +474,62 @@ export namespace Uoyroem {
             this._maxSize = maxSize;
         }
 
-        add(change: Change): void {
-            let lastChange = null;
-            if (change.type === ChangeType.VALUE) {
-                lastChange = this.findLast(lastChange => lastChange.field === change.field && lastChange.type === ChangeType.VALUE);
-            } else if (change.type === ChangeType.METAVALUE) {
-                lastChange = this.findLast(lastChange => lastChange.field === change.field && lastChange.type === ChangeType.METAVALUE && lastChange.metaKey === change.metaKey);
+        trimProcessedChanges() {
+            while (this._changes.length > this._maxSize) {
+                const index = this._changes.findIndex(c => c.processed);
+                if (index === -1) break;
+                this._changes.splice(index, 1);
             }
-            if (lastChange) {
+        }
+
+        add(change: Change): void {
+            let lastChange: Change | undefined | null = null;
+            if (change.type === ChangeType.VALUE) {
+                lastChange = this.getFieldChange(change.field, { type: ChangeType.VALUE });
+            } else if (change.type === ChangeType.META_VALUE) {
+                lastChange = this.getFieldChange(change.field, { type: ChangeType.META_VALUE, metaKey: change.metaKey });
+            }
+            if (lastChange != null) {
                 lastChange.last = false;
             }
             this._changes.push(change);
-            if (this._changes.length > this._maxSize) {
-                const index = this._changes.findIndex(c => c.processed);
-                if (index !== -1) {
-                    this._changes.splice(index, 1);
-                }
-            }
+            this.trimProcessedChanges();
         }
 
         remove(change: Change): void {
             this._changes.splice(this._changes.indexOf(change), 1);
         }
 
-        findLast(filter: (change: Change) => boolean): Change | undefined {
-            return this._changes.findLast(change => change.last && filter(change));
+        getFieldChange(field: FormField, filter: ValueChangeFilter): ValueChange | undefined;
+        getFieldChange(field: FormField, filter: MetaValueChangeFilter): MetaValueChange | undefined;
+        getFieldChange(field: FormField, filter: AnyChangeFilter): Change | undefined;
+        getFieldChange(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null, metaKey = null }: AnyChangeFilter | ValueChangeFilter | MetaValueChangeFilter = {}): Change | undefined {
+            let changes = this.getFieldChanges(field, { onlyCurrentState, last, processed, type });
+            if (type === ChangeType.META_VALUE && metaKey != null) {
+                changes = (changes as MetaValueChange[]).filter(change => change.metaKey === metaKey);
+            }
+            return changes.at(-1);
         }
 
-        getFieldChanges(field: FormField): Change[] {
-            return this._changes.filter(change => !change.processed && change.field === field);
-        }
-
-        getLastFieldChanges(field: FormField): Change[] {
-            return this._changes.filter(change => !change.processed && change.last && change.field === field);
+        getFieldChanges(field: FormField, filter?: ValueChangeFilter): ValueChange[];
+        getFieldChanges(field: FormField, filter?: MetaValueChangeFilter): MetaValueChange[];
+        getFieldChanges(field: FormField, filter?: AnyChangeFilter): Change[];
+        getFieldChanges(field: FormField, { onlyCurrentState = true, last = true, processed = false, type = null }: AnyChangeFilter | ValueChangeFilter | MetaValueChangeFilter = {}): Change[] {
+            let changes = this._changes.filter(change => change.field === field);
+            if (type != null) { changes = changes.filter(change => change.type === type); }
+            if (last != null) { changes = changes.filter(change => change.last === last); }
+            if (processed != null) { changes = changes.filter(change => change.processed === processed); }
+            if (onlyCurrentState) { changes = changes.filter(change => change.stateKey === field.currentStateKey); }
+            return changes
         }
 
         hasChanges(field: FormField): boolean {
-            return this.getLastFieldChanges(field).length !== 0;
+            return this.getFieldChanges(field, { onlyCurrentState: true, last: true }).length !== 0;
         }
 
         markProcessed(changes: Change[]): void {
-            changes.forEach(change => { change.processed = true; })
+            changes.forEach(change => { change.processed = true; });
+            this.trimProcessedChanges();
         }
 
         static asChangedName(change: Change): string | null {
@@ -515,11 +552,12 @@ export namespace Uoyroem {
             return changedNames;
         }
 
-        processChanges(field: FormField): Set<string> {
-            const changes = this.getFieldChanges(field);
-            const lastChanges = this.getLastFieldChanges(field);
-            this.markProcessed(changes);
-            field.dispatchEvent(new ChangesEvent(changes));
+        processChanges(field: FormField, type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+            const lastChanges = this.getFieldChanges(field, { onlyCurrentState: true, type });
+            if (!dryRun) {
+                this.markProcessed(this.getFieldChanges(field, { onlyCurrentState: true, last: null, type }));
+                field.dispatchEvent(new ChangesEvent(lastChanges));
+            }
             return FormFieldChangeSet.asChangedNames(lastChanges);
         }
     }
@@ -548,7 +586,6 @@ export namespace Uoyroem {
             this._name = name;
             this._type = type;
             this._initializedStateKeys = new Set();
-            this._currentStateKey = "default";
 
             this._initialValue = this.type.getInitialValue();
             this._valueMap = new Map();
@@ -557,8 +594,8 @@ export namespace Uoyroem {
             this._metaMap = new Map();
 
             this._changeSet = changeSet ?? new FormFieldChangeSet(32);
-
-            this.switchState({ stateKey: "default" });
+            this._currentStateKey = "default";
+            this.initializeState({ stateKey: "default" });
             if (effectManager != null) {
                 this.initializeDependencies(effectManager);
             }
@@ -566,6 +603,10 @@ export namespace Uoyroem {
 
         get self(): this {
             return this;
+        }
+
+        get currentStateKey() {
+            return this._currentStateKey;
         }
 
         get context(): FormFieldContext {
@@ -596,24 +637,27 @@ export namespace Uoyroem {
 
         reset({ stateKey = null, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
             stateKey ??= this._currentStateKey;
+            console.log("[FormField.reset] Reset state `%s` for field `%s`", stateKey, this.name);
             this.setValue(this._initialValue, { raw: true, stateKey, initiator });
             for (const [metaKey, value] of this._initialMeta.entries()) {
                 this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
             }
-            return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames(this.changeSet.getLastFieldChanges(this));
+            return this.processChanges(null, !processChanges);
         }
 
         initializeState({ stateKey, initiator = null }: FormFieldContext & { stateKey: string }): void {
             if (!this._initializedStateKeys.has(stateKey)) {
+                console.log("[FormField.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
                 this._initializedStateKeys.add(stateKey);
+                this._valueMap.set(stateKey, null);
                 this._metaMap.set(stateKey, new Map());
-                this.reset({ stateKey, initiator, processChanges: false });
+                this.reset({ stateKey, initiator, processChanges: true });
             }
         }
 
         switchState({ stateKey, initiator = null, processChanges = false }: FormFieldContext & { stateKey: string }): Set<string> {
+            console.log("[FormField.switchState] Switching state for field `%s` from `%s` to `%s`", this.name, this._currentStateKey, stateKey);
             this.initializeState({ stateKey, initiator });
-
             const oldValue = this._valueMap.get(this._currentStateKey);
             const newValue = this._valueMap.get(stateKey);
             if (!this.type.isEqual(oldValue, newValue)) {
@@ -636,7 +680,7 @@ export namespace Uoyroem {
                 if (oldValue !== newValue) {
                     const change: Change = {
                         stateKey,
-                        type: ChangeType.METAVALUE,
+                        type: ChangeType.META_VALUE,
                         field: this,
                         initiator,
                         metaKey,
@@ -649,9 +693,8 @@ export namespace Uoyroem {
                     this.changeSet.add(change);
                 }
             }
-
             this._currentStateKey = stateKey;
-            return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames(this.changeSet.getLastFieldChanges(this));
+            return this.processChanges(null, !processChanges);
         }
 
         /**
@@ -696,7 +739,9 @@ export namespace Uoyroem {
 
         getValue({ stateKey = null, raw = false, disabledIsNull = true }: FormFieldContext = {}): any {
             if (raw) {
-                return this._valueMap.get(stateKey ?? this._currentStateKey);
+                stateKey ??= this._currentStateKey
+                this.initializeState({ stateKey });
+                return this._valueMap.get(stateKey);
             }
             if (disabledIsNull && this.getMetaValue("disabled", { stateKey })) {
                 return null;
@@ -704,11 +749,11 @@ export namespace Uoyroem {
             return this.type.getFieldValue(this.getAdapter({ stateKey, raw: true }));
         }
 
-        setValue(newValue: any, { stateKey = null, raw = false, asInitial = false, initiator = null, processChanges = false }: FormFieldContext & { asInitial?: boolean } = {}): Set<string> {
-            if (asInitial) {
-                this._initialValue = newValue;
-                return new Set();
-            }
+        setInitialValue(newValue: any): void {
+            this._initialValue = newValue;
+        }
+
+        setValue(newValue: any, { stateKey = null, raw = false, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
             if (raw) {
                 initiator ??= this;
                 stateKey ??= this._currentStateKey;
@@ -727,8 +772,9 @@ export namespace Uoyroem {
                     last: true,
                     processed: false
                 };
+                console.log("[FormField.setValue] Value changed:", { oldValue, newValue, stateKey });
                 this.changeSet.add(change);
-                return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames([change]);
+                return this.processChanges(ChangeType.VALUE, !processChanges);
             }
             return this.type.setFieldValue(this.getAdapter({ stateKey, raw: true, processChanges, initiator }), newValue);
         }
@@ -736,18 +782,18 @@ export namespace Uoyroem {
         getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): any {
             if (raw) {
                 stateKey ??= this._currentStateKey
-                if (!this._metaMap.has(stateKey)) return null;
+                this.initializeState({ stateKey });
                 const meta = this._metaMap.get(stateKey);
                 return meta!.get(metaKey);
             }
             return this.type.getFieldMetaValue(this.getAdapter({ raw: true, stateKey }), metaKey);
         }
 
-        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, asInitial = false, processChanges = false, raw = false }: FormFieldContext & { asInitial?: boolean } = {}): Set<string> {
-            if (asInitial) {
-                this._initialMeta.set(metaKey, newValue);
-                return new Set();
-            }
+        setInitialMetaValue(metaKey: string, newValue: any): void {
+            this._initialMeta.set(metaKey, newValue);
+        }
+
+        setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
             if (raw) {
                 initiator ??= this;
                 stateKey ??= this._currentStateKey;
@@ -757,7 +803,7 @@ export namespace Uoyroem {
                 this._metaMap.get(stateKey)!.set(metaKey, newValue);
                 const change: Change = {
                     stateKey,
-                    type: ChangeType.METAVALUE,
+                    type: ChangeType.META_VALUE,
                     field: this,
                     initiator,
                     metaKey,
@@ -768,13 +814,14 @@ export namespace Uoyroem {
                     processed: false
                 };
                 this.changeSet.add(change);
-                return processChanges ? this.processChanges() : FormFieldChangeSet.asChangedNames([change]);
+                console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
+                return this.processChanges(ChangeType.META_VALUE, !processChanges);
             }
             return this.type.setFieldMetaValue(this.getAdapter({ stateKey, raw: true, initiator, processChanges }), metaKey, newValue);
         }
 
-        processChanges(): Set<string> {
-            return this.changeSet.processChanges(this);
+        processChanges(type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+            return this.changeSet.processChanges(this, type, dryRun);
         }
     }
 
@@ -823,8 +870,8 @@ export namespace Uoyroem {
             return this.fieldArray.map(field => field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges, raw })).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
 
-        processChanges(): Set<string> {
-            return this.fieldArray.map(field => field.processChanges()).find(changedNames => changedNames.size !== 0) ?? new Set();
+        processChanges(type: ChangeType | null = null, dryRun: boolean = false): Set<string> {
+            return this.fieldArray.map(field => field.processChanges(type, dryRun)).find(changedNames => changedNames.size !== 0) ?? new Set();
         }
     }
 
@@ -865,7 +912,7 @@ export namespace Uoyroem {
                     if (mutation.type === "attributes") {
                         switch (mutation.attributeName) {
                             case "disabled":
-                                this._syncFieldMeta("disabled");
+                                this._syncFieldMetaValue("disabled");
                                 break;
                         }
                     }
@@ -874,15 +921,15 @@ export namespace Uoyroem {
         }
 
         override link(): void {
-            this.field.setValue(this._getElementValue(), { asInitial: true });
-            this.field.setMetaValue("disabled", this._getElementMetaValue("disabled"), { asInitial: true });
-            this.field.setMetaValue("visible", true, { asInitial: true });
+            this.field.setInitialValue(this._getElementValue());
+            this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"));
+            this.field.setInitialMetaValue("visible", true);
             if (["radio", "checkbox"].includes(this.type.asElementType())) {
-                this.field.setMetaValue("checked", this._getElementMetaValue("checked"), { asInitial: true });
+                this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
             }
-            this.field.reset();
-            this.field.addEventListener("changes", this._fieldChangesEventListener);
+            this.field.reset({ processChanges: true, initiator: this });
 
+            this.field.addEventListener("changes", this._fieldChangesEventListener);
             if (["text", "number", "textarea"].includes(this.type.asElementType())) {
                 this.element.addEventListener("input", this._elementValueInputEventListener);
             } else {
@@ -906,6 +953,7 @@ export namespace Uoyroem {
         }
 
         _elementValueInputEventListener(event: Event): void {
+            console.log("[FormFieldElementLinker._elementValueInputEventListener] Event")
             this.field.setMetaValue("dirty", true, { initiator: this, processChanges: true });
             this._syncFieldValue();
         }
@@ -913,7 +961,7 @@ export namespace Uoyroem {
         _elementValueChangeEventListener(event: Event): void {
             this.field.setMetaValue("dirty", true, { initiator: this, processChanges: true });
             if (["radio", "checkbox"].includes(this.type.asElementType())) {
-                this._syncFieldMeta("checked");
+                this._syncFieldMetaValue("checked");
             } else {
                 this._syncFieldValue();
             }
@@ -926,13 +974,14 @@ export namespace Uoyroem {
                     if (!this._syncElementValue()) {
                         this._syncFieldValue();
                     }
-                } else if (change.type === ChangeType.METAVALUE) {
-                    this._syncElementMeta(change.metaKey);
+                } else if (change.type === ChangeType.META_VALUE) {
+                    this._syncElementMetaValue(change.metaKey);
                 }
             }
         }
 
         _syncElementValue(): boolean {
+            console.log("[FormFieldElementLinker._syncElementValue] Syncing element value");
             const value = this.field.getValue({ raw: true });
             const optionsInitialized = this.field.getMetaValue("optionsInitialized");
             switch (this.type.asElementType()) {
@@ -968,10 +1017,13 @@ export namespace Uoyroem {
         }
 
         _syncFieldValue(): void {
+            console.log("[FormFieldElementLinker._syncFieldValue] Syncing field value");
             this.field.setValue(this._getElementValue(), { initiator: this, processChanges: true, raw: true });
         }
 
-        _syncElementMeta(metaKey: string): void {
+        _syncElementMetaValue(metaKey: string): void {
+            console.log("[FormFieldElementLinker._syncElementMetaValue] Syncing element meta value");
+
             const value = this.field.getMetaValue(metaKey, { raw: true });
             switch (metaKey) {
                 case "disabled":
@@ -1028,7 +1080,8 @@ export namespace Uoyroem {
             }
         }
 
-        _syncFieldMeta(metaKey: string): void {
+        _syncFieldMetaValue(metaKey: string): void {
+            console.log("[FormFieldElementLinker._syncFieldMeta] Syncing field meta value");
             this.field.setMetaValue(metaKey, this._getElementMetaValue(metaKey), { initiator: this, processChanges: true });
         }
     }
@@ -1086,7 +1139,7 @@ export namespace Uoyroem {
             changes.filter(change =>
                 change.initiator !== form &&
                 change.field.type.asElementType() === "radio" &&
-                change.type === ChangeType.METAVALUE &&
+                change.type === ChangeType.META_VALUE &&
                 change.metaKey === "checked" &&
                 change.newValue
             ).forEach(change => {

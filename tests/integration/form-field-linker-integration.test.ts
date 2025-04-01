@@ -39,7 +39,7 @@ describe('FormFieldElementLinker', () => {
 
         // Эмулируем ввод в input
         inputElement.value = "user-typed";
-        inputElement.dispatchEvent(new Event("input"));
+        inputElement.dispatchEvent(new InputEvent("input"));
 
         // Проверяем, что FormField получил новое значение
         expect(formField.getValue({ raw: true })).toBe("user-typed");
@@ -102,34 +102,34 @@ describe('FormFieldElementLinker (Checkbox)', () => {
 
 
 describe('FormFieldElementLinker (Select)', () => {
-  let formField: Uoyroem.FormField;
-  let selectElement: HTMLSelectElement;
-  let linker: Uoyroem.FormFieldElementLinker;
+    let formField: Uoyroem.FormField;
+    let selectElement: HTMLSelectElement;
+    let linker: Uoyroem.FormFieldElementLinker;
 
-  beforeEach(() => {
-    formField = new Uoyroem.FormField("country", Uoyroem.FormFieldType.select());
-    selectElement = document.createElement("select");
-    selectElement.name = "country";
+    beforeEach(() => {
+        formField = new Uoyroem.FormField("country", Uoyroem.FormFieldType.select());
+        selectElement = document.createElement("select");
+        selectElement.name = "country";
 
-    // Добавляем опции
-    const option1 = document.createElement("option");
-    option1.value = "ru";
-    option1.textContent = "Russia";
-    selectElement.appendChild(option1);
+        // Добавляем опции
+        const option1 = document.createElement("option");
+        option1.value = "ru";
+        option1.textContent = "Russia";
+        selectElement.appendChild(option1);
 
-    const option2 = document.createElement("option");
-    option2.value = "us";
-    option2.textContent = "USA";
-    selectElement.appendChild(option2);
+        const option2 = document.createElement("option");
+        option2.value = "us";
+        option2.textContent = "USA";
+        selectElement.appendChild(option2);
 
-    linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
-    linker.link();
-  });
+        linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
+        linker.link();
+    });
 
-  it('should sync selected value to field', () => {
-    selectElement.value = "us";
-    selectElement.dispatchEvent(new Event("change"));
+    it('should sync selected value to field', () => {
+        selectElement.value = "us";
+        selectElement.dispatchEvent(new Event("change"));
 
-    expect(formField.getValue({ raw: true })).toBe("us");
-  });
+        expect(formField.getValue({ raw: true })).toBe("us");
+    });
 });

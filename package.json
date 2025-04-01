@@ -6,7 +6,7 @@
     "build": "webpack",
     "watch": "webpack --watch",
     "serve": "npx http-server dist",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:watch": "jest --watch"
   },
   "keywords": [

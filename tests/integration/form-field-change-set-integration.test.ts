@@ -14,31 +14,29 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('initial', { raw: true });
 
         // 2. Проверяем, что изменение есть в ChangeSet
-        const changes = changeSet.getFieldChanges(field);
-        expect(changes.length).toBe(1);
-        expect(changes[0].processed).toBe(false);
-
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.VALUE });
+        expect(change).not.toBeUndefined();
+        if (change === undefined) return;
+        expect(change.newValue).toBe("initial");
+        expect(change.processed).toBe(false);
+        
         // 3. Обрабатываем изменения
         const changedNames = field.processChanges();
 
         // 4. Проверяем, что изменение помечено как обработанное
-        expect(changes[0].processed).toBe(true);
+        expect(change.processed).toBe(true);
         expect(changedNames).toEqual(new Set(['test']));
     });
 
     it('should handle metaValue changes with dependencies', () => {
         // 1. Устанавливаем мета-значение
-        const changedNames = field.setMetaValue('disabled', true, {
-            raw: true
-        });
-
-        // 2. Проверяем, что ChangeSet содержит изменение
-        const changes = changeSet.getFieldChanges(field);
-        expect(changes.length).toBe(1);
-        expect((changes[0] as Uoyroem.MetaValueChange).metaKey).toBe('disabled');
-
-        // 3. Проверяем возвращенные changedNames
+        const changedNames = field.setMetaValue('disabled', true, { raw: true });
         expect(changedNames).toEqual(new Set(['test:disabled']));
+
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.META_VALUE });
+        expect(change).not.toBeUndefined();
+        if (change === undefined) return;
+        expect(change.metaKey).toBe('disabled');
     });
 
     it('should only return last unprocessed changes', () => {
@@ -47,21 +45,19 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('second', { raw: true });
 
         // 2. Получаем ТОЛЬКО последнее изменение
-        const lastChanges = changeSet.getLastFieldChanges(field);
-        expect(lastChanges.length).toBe(1);
-        expect(lastChanges[0].newValue).toBe('second');
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.ChangeType.VALUE });
+        expect(change).not.toBeUndefined();
+        if (change === undefined) return;
+        expect(change.newValue).toBe("second");
     });
 
     it('should handle multiple state keys', () => {
         // 1. Создаем второе состояние
-        field.switchState('alternative');
+        field.switchState({ stateKey: 'alternative' });
         field.setValue('alt-value', { raw: true, stateKey: 'alternative' });
 
         // 2. Проверяем изолированность состояний
-        const defaultStateValue = field.getValue({ stateKey: 'default', raw: true });
-        const altStateValue = field.getValue({ stateKey: 'alternative', raw: true });
-
-        expect(defaultStateValue).toBeNull();
-        expect(altStateValue).toBe('alt-value');
+        expect(field.getValue({ stateKey: 'default', raw: true })).toBeNull();
+        expect(field.getValue({ stateKey: 'alternative', raw: true })).toBe('alt-value');
     });
 });
