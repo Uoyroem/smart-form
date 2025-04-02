@@ -1,5 +1,6 @@
 // form-action.test.ts
-import * as Uoyroem from '../../lib/core/form-action';
+import * as Uoyroem from "../../lib/index";
+
 
 // Реализации для тестов
 class LogFormActionHandler extends Uoyroem.FormActionHandler<{ field: string }, { log: string }> {

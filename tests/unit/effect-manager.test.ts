@@ -1,5 +1,6 @@
 // EffectManager.test.ts
-import * as Uoyroem from '../../lib/core/form';
+import * as Uoyroem from "../../lib/index";
+
 
 describe('EffectManager', () => {
   let effectManager: Uoyroem.EffectManager;

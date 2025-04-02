@@ -1,4 +1,5 @@
-import * as Uoyroem from '../../lib/core/form';
+import * as Uoyroem from "../../lib/index";
+
 
 describe("Form with Radio Buttons", () => {
   let form: Uoyroem.Form;

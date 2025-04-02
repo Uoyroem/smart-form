@@ -3,36 +3,35 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const commonConfig = {
-  entry: './lib/index.ts',
+  entry: './index.js',
   module: {
     rules: [
       {
         test: /\.ts$/,
-        use: [
-          {
-            loader: 'babel-loader',
-            options: {
-              presets: [
-                ['@babel/preset-env', { targets: "defaults" }],
-                '@babel/preset-typescript'
-              ]
-            }
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              ['@babel/preset-env', { targets: 'defaults' }],
+              '@babel/preset-typescript',
+            ],
           },
-          'ts-loader'
-        ],
-        exclude: /node_modules/
-      }
-    ]
+        },
+        exclude: /node_modules/,
+      },
+    ],
   },
   resolve: {
-    extensions: ['.ts', '.js', '.scss']
+    extensions: ['.ts', '.js', '.scss'],
   },
   output: {
-    filename: 'smart-form.bundle.min.js',
+    filename: 'smart-system.bundle.min.js',
     path: path.resolve(__dirname, 'dist'),
-    libraryTarget: 'window',
-    library: 'Uoyroem'
-  }
+    library: {
+      type: 'window',
+      name: 'Uoyroem',
+    },
+  },
 };
 
 const productionConfig = {
@@ -45,27 +44,22 @@ const productionConfig = {
       ...commonConfig.module.rules,
       {
         test: /\.scss$/,
-        use: [
-          MiniCssExtractPlugin.loader,
-          'css-loader',
-          'sass-loader'
-        ]
-      }
-    ]
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+      },
+    ],
   },
   plugins: [
     new CleanWebpackPlugin(),
-    new MiniCssExtractPlugin({filename: "smart-form.min.css"})
+    new MiniCssExtractPlugin({ filename: 'smart-system.min.css' }),
   ],
   optimization: {
     minimize: true,
     splitChunks: {
-      chunks: 'all'
-    }
-  }
+      chunks: 'all',
+    },
+  },
 };
 
-// DEVELOPMENT конфигурация
 const developmentConfig = {
   ...commonConfig,
   mode: 'development',
@@ -76,17 +70,11 @@ const developmentConfig = {
       ...commonConfig.module.rules,
       {
         test: /\.scss$/,
-        use: [
-          'style-loader',
-          'css-loader',
-          'sass-loader'
-        ]
-      }
-    ]
+        use: ['style-loader', 'css-loader', 'sass-loader'],
+      },
+    ],
   },
-  plugins: [
-    new CleanWebpackPlugin()
-  ],
+  plugins: [new CleanWebpackPlugin()],
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),
@@ -94,12 +82,10 @@ const developmentConfig = {
     compress: true,
     port: 9000,
     hot: true,
-    open: true
-  }
+    open: true,
+  },
 };
 
 module.exports = (env, argv) => {
-  return argv.mode === 'production'
-    ? productionConfig
-    : developmentConfig;
+  return argv.mode === 'production' ? productionConfig : developmentConfig;
 };

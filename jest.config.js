@@ -3,7 +3,10 @@ module.exports = {
     testEnvironment: 'jsdom',
     moduleFileExtensions: ['ts', 'js'],
     transform: {
-        '^.+\\.ts$': 'ts-jest'
+        '^.+\\.ts$': [
+            'ts-jest',
+            { tsconfig: 'tsconfig.json' },
+        ],
     },
-    testMatch: ['**/tests/**/*.test.ts']
+    testMatch: ['**/tests/**/*.test.ts'],
 };
