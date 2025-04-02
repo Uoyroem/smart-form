@@ -3,7 +3,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const commonConfig = {
-  entry: './index.js',
+  entry: 'main.js',
   module: {
     rules: [
       {
