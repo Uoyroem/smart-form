@@ -70,7 +70,7 @@ export abstract class FormActionHandler<RequestBody extends FormActionRequestBod
 }
 
 export abstract class FormActionMiddleware<RequestBody extends FormActionRequestBody, ResponseBody extends FormActionResponseBody> {
-    constructor(public readonly registry: FormActionRegistry = FormActionRegistry.instance) { }
+    constructor() { }
 
     abstract handle(request: FormActionRequest<RequestBody>, getResponse: () => Promise<FormActionResponse<ResponseBody>>): Promise<FormActionResponse<ResponseBody>>;
 }
@@ -102,23 +102,9 @@ export class FormAction<RequestBody extends FormActionRequestBody, ResponseBody 
 }
 
 export class FormActionRegistry {
-    private constructor(public readonly parent?: FormActionRegistry) { }
+    private constructor() { }
 
     static readonly instance: FormActionRegistry = new FormActionRegistry();
-
-    context(parent: FormActionRegistry = FormActionRegistry.instance): FormActionRegistry {
-        return new FormActionRegistry(parent);
-    }
-
-    getActionMiddlewares<RequestBody extends FormActionRequestBody, ResponseBody extends FormActionResponseBody>(action: FormAction<RequestBody, ResponseBody>) {
-        const registries: FormActionRegistry[] = [];
-        let registry: FormActionRegistry | undefined = this;
-        while (registry != null) {
-            registries.push(registry);
-            registry = registry.parent;
-        }
-        return action.middlewares.filter(middleware => registries.includes(middleware.registry))
-    }
 
     async fetch<RequestBody extends FormActionRequestBody, ResponseBody extends FormActionResponseBody>(action: FormAction<RequestBody, ResponseBody>, request: FormActionRequest<RequestBody>): Promise<FormActionResponse<ResponseBody>> {
         return action.handle(request, this);

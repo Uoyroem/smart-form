@@ -1,5 +1,5 @@
 import { EffectManager } from "./effect-manager";
-export { EffectManager };
+import { FormAction, FormActionHandler, FormActionRegistry, FormActionRequest, FormActionRequestBody, FormActionResponseBody, FormActionResponse, FormActionResponseStatus } from "./form-action";
 
 function deepEqual(a: any, b: any): boolean {
     if (a === b) return true;
@@ -48,6 +48,49 @@ export class FormFieldValidatorRequired extends FormFieldValidator {
 
     }
 }
+
+export interface FormActionFieldValueRequestBody extends FormActionRequestBody {
+    field: FormField;
+}
+
+export interface FormActionFieldMetaValueRequestBody extends FormActionRequestBody {
+    field: FormField;
+    metaKey: string;
+}
+
+export interface FormActionElementValueRequestBody extends FormActionRequestBody {
+    element: Element;
+}
+
+export interface FormActionElementMetaValueRequestBody extends FormActionRequestBody {
+    element: Element;
+    metaKey: string;
+}
+
+export interface FormActionValueResponseBody extends FormActionResponseBody {
+    value: any;
+}
+
+export interface FormActionMetaValueResponseBody extends FormActionResponseBody {
+    value: any;
+}
+
+class FormGetFieldValueActionHandler extends FormActionHandler<FormActionFieldValueRequestBody, FormActionValueResponseBody> {
+    override async handle(request: FormActionRequest<FormActionFieldValueRequestBody>, registry: FormActionRegistry): Promise<FormActionResponse<FormActionValueResponseBody>> {
+        return new FormActionResponse({ value: request.body.field.getValue() }, FormActionResponseStatus.Success)
+    }
+}
+
+class FormGetFieldMetaValueActionHandler extends FormActionHandler<FormActionFieldMetaValueRequestBody, FormActionMetaValueResponseBody> {
+    override async handle(request: FormActionRequest<FormActionFieldMetaValueRequestBody>, registry: FormActionRegistry): Promise<FormActionResponse<FormActionMetaValueResponseBody>> {
+        return new FormActionResponse({ value: request.body.field.getMetaValue(request.body.metaKey) }, FormActionResponseStatus.Success)
+    }
+}
+
+
+const getFieldValue = new FormAction(new FormGetFieldValueActionHandler());
+const getFieldMetaValue = new FormAction(new FormGetFieldMetaValueActionHandler());
+
 
 export type FormElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
