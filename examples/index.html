@@ -4,30 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <style>
-        .smart-system-form [data-visible="false"] {
-            transform: translateX(100%);
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .smart-system-form [data-visible="true"] {
-            transform: translateX(0);
-            opacity: 1;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .smart-system-form .autofill {
-            outline: dashed blue;
-        }
-    </style>
+    <title>Example 1</title>
+    <link rel="stylesheet" href="/dist/smart-form.min.css">
 </head>
 
 <body>
     <form id="test-form">
         <div style="width: 100px;">
-
             <input style="display: block; width: 100%;" type="number" name="amount" id="amount-input">
             <input style="display: block; width: 100%;" type="number" name="percent" id="percent-input">
             <input style="display: block; width: 100%;" type="number" name="total" id="total-input">
@@ -36,7 +19,7 @@
             </div>
         </div>
     </form>
-    <script src="/dist/smart-form.bundle.js"></script>
+    <script src="/dist/smart-form.bundle.min.js"></script>
     <script>
         class TestForm extends Uoyroem.Form {
             constructor() {
