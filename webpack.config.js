@@ -1,31 +1,105 @@
-const path = require("path");
+const path = require('path');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = {
-  entry: "./lib/index.ts",           // Точка входа вашего приложения
-  mode: "production",                // Минификация включена (или "development" для отладки)
+const commonConfig = {
+  entry: './lib/index.ts',
   module: {
     rules: [
       {
-        test: /\.ts$/,               // Обрабатывать все .ts файлы
-        use: "ts-loader",            // Использовать ts-loader для TypeScript
-        exclude: /node_modules/      // Исключить node_modules
-      },
-      {
-        test: /\.scss$/, // Обрабатывать все .scss файлы
+        test: /\.ts$/,
         use: [
-          "style-loader", // Внедряет CSS в DOM через <style>
-          "css-loader", // Обрабатывает CSS (импорты, url и т.д.)
-          "sass-loader", // Компилирует SCSS в CSS
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: "defaults" }],
+                '@babel/preset-typescript'
+              ]
+            }
+          },
+          'ts-loader'
         ],
-      },
+        exclude: /node_modules/
+      }
     ]
   },
   resolve: {
-    extensions: [".ts", ".js", ".scss"]       // Поддерживаемые расширения файлов
+    extensions: ['.ts', '.js', '.scss']
   },
   output: {
-    filename: "smart-form.bundle.js",           // Имя выходного файла
-    path: path.resolve(__dirname, "dist"), // Папка для вывода
-    libraryTarget: "window"          // Экспорт в window для браузера
+    filename: 'smart-form.bundle.min.js',
+    path: path.resolve(__dirname, 'dist'),
+    libraryTarget: 'window',
+    library: 'Uoyroem'
   }
+};
+
+const productionConfig = {
+  ...commonConfig,
+  mode: 'production',
+  devtool: 'source-map',
+  module: {
+    ...commonConfig.module,
+    rules: [
+      ...commonConfig.module.rules,
+      {
+        test: /\.scss$/,
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          'sass-loader'
+        ]
+      }
+    ]
+  },
+  plugins: [
+    new CleanWebpackPlugin(),
+    new MiniCssExtractPlugin({filename: "smart-form.min.css"})
+  ],
+  optimization: {
+    minimize: true,
+    splitChunks: {
+      chunks: 'all'
+    }
+  }
+};
+
+// DEVELOPMENT конфигурация
+const developmentConfig = {
+  ...commonConfig,
+  mode: 'development',
+  devtool: 'eval-source-map',
+  module: {
+    ...commonConfig.module,
+    rules: [
+      ...commonConfig.module.rules,
+      {
+        test: /\.scss$/,
+        use: [
+          'style-loader',
+          'css-loader',
+          'sass-loader'
+        ]
+      }
+    ]
+  },
+  plugins: [
+    new CleanWebpackPlugin()
+  ],
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'dist'),
+    },
+    compress: true,
+    port: 9000,
+    hot: true,
+    open: true
+  }
+};
+
+module.exports = (env, argv) => {
+  return argv.mode === 'production'
+    ? productionConfig
+    : developmentConfig;
 };

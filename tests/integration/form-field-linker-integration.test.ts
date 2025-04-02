@@ -1,4 +1,4 @@
-import { Uoyroem } from '../../lib/core/form';
+import * as Uoyroem from '../../lib/core/form';
 
 describe('FormFieldElementLinker', () => {
     let formField: Uoyroem.FormField;

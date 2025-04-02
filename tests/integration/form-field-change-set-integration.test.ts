@@ -1,9 +1,9 @@
-import { Uoyroem } from '../../lib/core/form';
+import * as Uoyroem from '../../lib/core/form';
 
 describe('FormField + FormFieldChangeSet Integration', () => {
     let field: Uoyroem.FormField;
     let changeSet: Uoyroem.FormFieldChangeSet;
-
+    
     beforeEach(() => {
         changeSet = new Uoyroem.FormFieldChangeSet();
         field = new Uoyroem.FormField('test', Uoyroem.FormFieldType.text(), { changeSet });
