@@ -1,3 +1,4 @@
+import "core-js/actual/set/intersection";
 import { ValuedDependencyGraph } from "./dependency-graph";
 
 export interface Effect {
@@ -6,21 +7,17 @@ export interface Effect {
 }
 
 export class EffectManager extends ValuedDependencyGraph<Effect> {
-    async triggerEffects({ changedNames = null }: { changedNames?: Set<string> | null } = {}) {
-        for (const name of this.topologicalOrder) {
-            if (changedNames != null && this.dependentMap.get(name)!.intersection(changedNames).size === 0) {
+    async triggerEffects({ keys = null }: { keys?: Set<string> | null, stopOnError?: boolean, errorAsChange?: boolean } = {}): Promise<void> {
+        for (const key of this.topologicalOrder) {
+            if (keys != null && this.dependentMap.get(key)!.intersection(keys).size === 0) {
                 continue;
             }
-            const node = this.getNode(name);
+            const node = this.getNode(key);
             if (node != null) {
-                const changedNamesByEffect = await node.value.callback();
-                if (changedNames) {
-                    changedNamesByEffect.forEach(changedName => { changedNames.add(changedName); });
-                }
+                const keysByEffect = await node.value.callback();
+                keys && keysByEffect.forEach(keys.add, keys);
             } else {
-                if (changedNames) {
-                    changedNames.add(name);
-                }
+                keys?.add(key);
             }
         }
     }

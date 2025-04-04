@@ -1,13 +1,13 @@
 export class Request<Body> {
     public body: Body;
-    public handlerRegistry: Registry;
-    public middlewaresRegistry: Registry;
+    public handlerRegistry: ChainedRegistry;
+    public middlewaresRegistry: ChainedRegistry;
 
     constructor({
         body,
         handlerRegistry = Registry.get(),
         middlewaresRegistry = Registry.get(),
-    }: { body: Body, handlerRegistry?: Registry, middlewaresRegistry: Registry }) {
+    }: { body: Body, handlerRegistry?: ChainedRegistry, middlewaresRegistry?: ChainedRegistry }) {
         this.body = body;
         this.handlerRegistry = handlerRegistry;
         this.middlewaresRegistry = middlewaresRegistry;
@@ -53,6 +53,16 @@ export class Status {
     protected constructor(public readonly code: number, public readonly tags: ReadonlySet<string>, public readonly description: string) { }
 }
 
+export class Response<Body> {
+    public body: Body;
+    public status: Status;
+
+    constructor({ body, status }: { body: Body, status: Status }) {
+        this.body = body;
+        this.status = status;
+    }
+}
+
 
 export interface ErrorResponseBody {
     detail: string;
@@ -70,16 +80,6 @@ export function isActionError(error: unknown): error is ActionError {
     return error instanceof ActionError;
 }
 
-export class Response<Body> {
-    public body: Body;
-    public status: Status;
-
-    constructor({ body, status }: { body: Body, status: Status }) {
-        this.body = body;
-        this.status = status;
-    }
-}
-
 
 export abstract class Handler<RequestBody, ResponseBody> {
     abstract handle(request: Request<RequestBody>): Promise<Response<ResponseBody>>;
@@ -87,6 +87,7 @@ export abstract class Handler<RequestBody, ResponseBody> {
 
 export abstract class Middleware<RequestBody, ResponseBody> {
     constructor(public readonly key: string) { }
+
 
     abstract handle(request: Request<RequestBody>, getResponse: () => Promise<Response<ResponseBody>>): Promise<Response<ResponseBody>>;
 }
@@ -111,39 +112,41 @@ export class CheckErrorStatusMiddleware extends Middleware<any, any> {
     }
 }
 
+
 export class Action<RequestBody, ResponseBody> {
     public registryHandler: Map<Registry, Handler<RequestBody, ResponseBody>>;
     public registryMiddlewares: Map<Registry, Map<string, Middleware<RequestBody, ResponseBody>>>;
 
-    constructor(public handler?: Handler<RequestBody, ResponseBody>) {
+    constructor() {
         this.registryHandler = new Map();
         this.registryMiddlewares = new Map();
-        handler && this.setHandler(handler);
     }
 
-    getHandler(registry: Registry = Registry.get()) {
-        if (!this.registryHandler.has(registry)) {
-            this.registryHandler.set(registry, new DefaultHandler());
+    getHandler(chainedRegistry: ChainedRegistry = Registry.get()) {
+        for (const registry of chainedRegistry.registries) {
+            if (!this.registryHandler.has(registry)) continue;
+            return this.registryHandler.get(registry)!;
         }
-        return this.registryHandler.get(registry)!;
+        return new DefaultHandler();
     }
 
-    setHandler(handler: Handler<RequestBody, ResponseBody>, registry: Registry = Registry.get()) {
-        this.registryHandler.set(registry, handler);
+    setHandler(handler: Handler<RequestBody, ResponseBody>, registry: ChainedRegistry = Registry.get()) {
+        this.registryHandler.set(registry.head, handler);
     }
 
-    getMiddlewares(registry: Registry = Registry.get()): ReadonlyMap<string, Middleware<RequestBody, ResponseBody>> {
-        if (!this.registryMiddlewares.has(registry)) {
-            this.registryMiddlewares.set(registry, new Map());
+    getMiddlewares(chainedRegistry: ChainedRegistry = Registry.get()): ReadonlyMap<string, Middleware<RequestBody, ResponseBody>> {
+        for (const registry of chainedRegistry.registries) {
+            if (!this.registryMiddlewares.has(registry)) continue;
+            return this.registryMiddlewares.get(registry)!;
         }
-        return this.registryMiddlewares.get(registry)!;
+        return new Map();
     }
 
-    addMiddleware(middleware: Middleware<RequestBody, ResponseBody>, registry: Registry = Registry.get()): void {
-        if (!this.registryMiddlewares.has(registry)) {
-            this.registryMiddlewares.set(registry, new Map());
+    addMiddleware(middleware: Middleware<RequestBody, ResponseBody>, registry: ChainedRegistry = Registry.get()): void {
+        if (!this.registryMiddlewares.has(registry.head)) {
+            this.registryMiddlewares.set(registry.head, new Map());
         }
-        this.registryMiddlewares.get(registry)!.set(middleware.key, middleware);
+        this.registryMiddlewares.get(registry.head)!.set(middleware.key, middleware);
     }
 
     async handle(request: Request<RequestBody>): Promise<Response<ResponseBody>> {
@@ -169,7 +172,29 @@ export class Action<RequestBody, ResponseBody> {
     }
 }
 
-export class Registry {
+export class RedirectHandler {
+
+}
+
+export interface ChainedRegistry {
+    get head(): Registry;
+    readonly registries: readonly Registry[];
+    fallback(...names: string[]): RegistryChain;
+}
+
+export class RegistryChain implements ChainedRegistry {
+    constructor(public readonly registries: Registry[]) { }
+
+    get head(): Registry {
+        return this.registries[0];
+    }
+
+    fallback(...names: string[]): RegistryChain {
+        return new RegistryChain(this.registries.concat(names.map(name => Registry.get(name))));
+    }
+}
+
+export class Registry implements ChainedRegistry {
     private static readonly instanceMap = new Map();
     static get(name: string = "root"): Registry {
         if (!this.instanceMap.has(name)) {
@@ -177,7 +202,18 @@ export class Registry {
         }
         return this.instanceMap.get(name);
     }
-    private constructor(public readonly name: string) { }
+    public readonly registries: Registry[];
+    private constructor(public readonly name: string) {
+        this.registries = [this];
+    }
+
+    get head(): Registry {
+        return this;
+    }
+
+    fallback(...names: string[]): RegistryChain {
+        return new RegistryChain(this.registries.concat(names.map(name => Registry.get(name))));
+    }
 }
 
 export const registry = Registry.get();

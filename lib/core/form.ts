@@ -1,3 +1,4 @@
+
 import { EffectManager } from "./effect-manager";
 
 function deepEqual(a: any, b: any): boolean {
@@ -1160,7 +1161,7 @@ export class FormChangesForTriggerEffectsManager extends FormChangesManager {
     override manage(form: Form, changes: FormFieldChange[]): void {
         changes = changes.filter(change => change.initiator !== form);
         if (changes.length === 0) return;
-        form.effectManager.triggerEffects({ changedNames: FormFieldChangeSet.asChangedNames(changes) });
+        form.effectManager.triggerEffects({ keys: FormFieldChangeSet.asChangedNames(changes) });
     }
 }
 

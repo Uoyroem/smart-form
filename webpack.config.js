@@ -3,20 +3,12 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const commonConfig = {
-  entry: 'main.js',
+  entry: './main.js',
   module: {
     rules: [
       {
         test: /\.ts$/,
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: [
-              ['@babel/preset-env', { targets: 'defaults' }],
-              '@babel/preset-typescript',
-            ],
-          },
-        },
+        use: 'babel-loader',
         exclude: /node_modules/,
       },
     ],
@@ -29,7 +21,7 @@ const commonConfig = {
     path: path.resolve(__dirname, 'dist'),
     library: {
       type: 'window',
-      name: 'Uoyroem',
+      name: 'SmartSystem',
     },
   },
 };
@@ -54,9 +46,7 @@ const productionConfig = {
   ],
   optimization: {
     minimize: true,
-    splitChunks: {
-      chunks: 'all',
-    },
+    splitChunks: false
   },
 };
 

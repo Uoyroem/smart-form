@@ -1,138 +1,208 @@
-// form-action.test.ts
 import * as Uoyroem from "../../lib/index";
 
+describe('Request', () => {
+  test('should initialize with default registries', () => {
+    const request = new Uoyroem.Request({ body: { test: 'data' } });
+    expect(request.body).toEqual({ test: 'data' });
+    expect(request.handlerRegistry).toBeInstanceOf(Uoyroem.Registry);
+    expect(request.middlewaresRegistry).toBeInstanceOf(Uoyroem.Registry);
+  });
 
-// Реализации для тестов
-class LogFormActionHandler extends Uoyroem.FormActionHandler<{ field: string }, { log: string }> {
-    async handle(request: Uoyroem.FormActionRequest<{ field: string }>): Promise<Uoyroem.FormActionResponse<{ log: string }>> {
-        await new Promise((resolve) => setTimeout(resolve, 50)); // Имитация асинхронной работы
-        return new Uoyroem.FormActionResponse({ log: `Logged: ${request.body.field}` }, Uoyroem.FormActionResponseStatus.Success);
+  test('should initialize with custom registries', () => {
+    const customRegistry = Uoyroem.Registry.get('custom');
+    const request = new Uoyroem.Request({
+      body: { test: 'data' },
+      handlerRegistry: customRegistry,
+      middlewaresRegistry: customRegistry
+    });
+    expect(request.handlerRegistry).toBe(customRegistry);
+    expect(request.middlewaresRegistry).toBe(customRegistry);
+  });
+});
+
+describe('Status', () => {
+  test('should create and retrieve instances', () => {
+    expect(Uoyroem.Status.Ok.code).toBe(1);
+    expect(Uoyroem.Status.NoContent.code).toBe(2);
+    expect(Uoyroem.Status.BadRequest.code).toBe(3);
+    expect(Uoyroem.Status.NotImplemented.code).toBe(4);
+
+    expect(Uoyroem.Status.Ok.successfull).toBe(true);
+    expect(Uoyroem.Status.BadRequest.error).toBe(true);
+  });
+
+  test('get() should return existing instance', () => {
+    const instance = Uoyroem.Status.get(1);
+    expect(instance).toBe(Uoyroem.Status.Ok);
+  });
+
+  test('get() should throw for non-existent code', () => {
+    expect(() => Uoyroem.Status.get(999)).toThrow();
+  });
+});
+
+describe('Response', () => {
+  test('should initialize correctly', () => {
+    const response = new Uoyroem.Response({
+      body: { data: 'test' },
+      status: Uoyroem.Status.Ok
+    });
+    expect(response.body).toEqual({ data: 'test' });
+    expect(response.status).toBe(Uoyroem.Status.Ok);
+  });
+});
+
+describe('ActionError', () => {
+  test('should create with response and cause', () => {
+    const response = new Uoyroem.Response({
+      body: { detail: 'Error detail' },
+      status: Uoyroem.Status.BadRequest
+    });
+    const cause = new Error('Original error');
+    const error = new Uoyroem.ActionError({ response, cause });
+
+    expect(error.message).toBe('Error detail');
+    expect(error.response).toBe(response);
+    expect(error.cause).toBe(cause);
+  });
+
+  test('isActionError should detect ActionError', () => {
+    const response = new Uoyroem.Response({
+      body: { detail: 'Error' },
+      status: Uoyroem.Status.BadRequest
+    });
+    const error = new Uoyroem.ActionError({ response });
+    expect(Uoyroem.isActionError(error)).toBe(true);
+    expect(Uoyroem.isActionError(new Error('Regular error'))).toBe(false);
+  });
+});
+
+describe('Handler', () => {
+  test('DefaultHandler should throw NotImplemented error', async () => {
+    const handler = new Uoyroem.DefaultHandler();
+    const request = new Uoyroem.Request({ body: {} });
+    await expect(handler.handle(request)).rejects.toThrow(Uoyroem.ActionError);
+  });
+});
+
+describe('Middleware', () => {
+  test('CheckErrorStatusMiddleware should throw on error status', async () => {
+    const middleware = new Uoyroem.CheckErrorStatusMiddleware();
+    const request = new Uoyroem.Request({ body: {} });
+    const errorResponse = new Uoyroem.Response({
+      body: { detail: 'Error' },
+      status: Uoyroem.Status.BadRequest
+    });
+    
+    await expect(
+      middleware.handle(request, async () => errorResponse)
+    ).rejects.toThrow(Uoyroem.ActionError);
+  });
+
+  test('CheckErrorStatusMiddleware should pass through success status', async () => {
+    const middleware = new Uoyroem.CheckErrorStatusMiddleware();
+    const request = new Uoyroem.Request({ body: {} });
+    const successResponse = new Uoyroem.Response({
+      body: { data: 'success' },
+      status: Uoyroem.Status.Ok
+    });
+    
+    const result = await middleware.handle(request, async () => successResponse);
+    expect(result).toBe(successResponse);
+  });
+});
+
+describe('Action', () => {
+  class TestHandler extends Uoyroem.Handler<any, any> {
+    async handle(request: Uoyroem.Request<any>): Promise<Uoyroem.Response<any>> {
+      return new Uoyroem.Response({
+        body: request.body,
+        status: Uoyroem.Status.Ok
+      });
     }
-}
+  }
 
-class ValidateFormActionMiddleware extends Uoyroem.FormActionMiddleware<{ field: string }, { log: string }> {
+  class TestMiddleware extends Uoyroem.Middleware<any, any> {
+    constructor() {
+      super('TestMiddleware');
+    }
+
     async handle(
-        request: Uoyroem.FormActionRequest<{ field: string }>,
-        getResponse: () => Promise<Uoyroem.FormActionResponse<{ log: string }>>
-    ): Promise<Uoyroem.FormActionResponse<{ log: string }>> {
-        if (!request.body.field) {
-            return new Uoyroem.FormActionResponse(
-                { log: "Error: Field is empty" },
-                Uoyroem.FormActionResponseStatus.getOrCreate(400, "Bad Request")
-            );
-        }
-        return await getResponse();
+      request: Uoyroem.Request<any>,
+      getResponse: () => Promise<Uoyroem.Response<any>>
+    ): Promise<Uoyroem.Response<any>> {
+      request.body.modified = true;
+      return getResponse();
     }
-}
+  }
 
-class LogTimeMiddleware extends Uoyroem.FormActionMiddleware<{ field: string }, { log: string }> {
-    async handle(
-        request: Uoyroem.FormActionRequest<{ field: string }>,
-        getResponse: () => Promise<Uoyroem.FormActionResponse<{ log: string }>>
-    ): Promise<Uoyroem.FormActionResponse<{ log: string }>> {
-        const start = Date.now();
-        const response = await getResponse();
-        const timeTaken = Date.now() - start;
-        response.body.log += ` (took ${timeTaken}ms)`;
-        return response;
+  test('should use DefaultHandler when no handler set', async () => {
+    const action = new Uoyroem.Action();
+    const request = new Uoyroem.Request({ body: {} });
+    await expect(action.handle(request)).rejects.toThrow(Uoyroem.ActionError);
+  });
+
+  test('should use custom handler', async () => {
+    const action = new Uoyroem.Action();
+    const handler = new TestHandler();
+    action.setHandler(handler);
+    
+    const request = new Uoyroem.Request({ body: { test: 'data' } });
+    const response = await action.handle(request);
+    
+    expect(response.body).toEqual({ test: 'data' });
+    expect(response.status).toBe(Uoyroem.Status.Ok);
+  });
+
+  test('should apply middlewares in correct order', async () => {
+    const action = new Uoyroem.Action();
+    const handler = new TestHandler();
+    const middleware = new TestMiddleware();
+    
+    action.setHandler(handler);
+    action.addMiddleware(middleware);
+    
+    const request = new Uoyroem.Request({ body: {} });
+    const response = await action.handle(request);
+    
+    expect(response.body).toEqual({ modified: true });
+  });
+
+  test('should wrap non-ActionError in ActionError', async () => {
+    class ErrorHandler extends Uoyroem.Handler<any, any> {
+      async handle(): Promise<Uoyroem.Response<any>> {
+        throw new Error('Regular error');
+      }
     }
-}
 
-// Middleware для проверки порядка выполнения
-class FirstOrderMiddleware extends Uoyroem.FormActionMiddleware<{ field: string }, { log: string }> {
-    constructor(private orderArray: string[]) {
-        super();
-    }
-    async handle(
-        request: Uoyroem.FormActionRequest<{ field: string }>,
-        getResponse: () => Promise<Uoyroem.FormActionResponse<{ log: string }>>
-    ): Promise<Uoyroem.FormActionResponse<{ log: string }>> {
-        this.orderArray.push("first");
-        return await getResponse();
-    }
-}
+    const action = new Uoyroem.Action();
+    action.setHandler(new ErrorHandler());
+    
+    const request = new Uoyroem.Request({ body: {} });
+    await expect(action.handle(request)).rejects.toThrow(Uoyroem.ActionError);
+  });
+});
 
-class SecondOrderMiddleware extends Uoyroem.FormActionMiddleware<{ field: string }, { log: string }> {
-    constructor(private orderArray: string[]) {
-        super();
-    }
-    async handle(
-        request: Uoyroem.FormActionRequest<{ field: string }>,
-        getResponse: () => Promise<Uoyroem.FormActionResponse<{ log: string }>>
-    ): Promise<Uoyroem.FormActionResponse<{ log: string }>> {
-        this.orderArray.push("second");
-        return await getResponse();
-    }
-}
+describe('Registry', () => {
+  test('should return same instance for same name', () => {
+    const registry1 = Uoyroem.Registry.get('test');
+    const registry2 = Uoyroem.Registry.get('test');
+    expect(registry1).toBe(registry2);
+  });
 
-describe('FormAction', () => {
-    let action: Uoyroem.FormAction<{ field: string }, { log: string }>;
+  test('should return different instances for different names', () => {
+    const registry1 = Uoyroem.Registry.get('test1');
+    const registry2 = Uoyroem.Registry.get('test2');
+    expect(registry1).not.toBe(registry2);
+  });
 
-    beforeEach(() => {
-        // Создаём новый экземпляр перед каждым тестом
-        action = new Uoyroem.FormAction(new LogFormActionHandler());
-    });
-
-    test('should process handler without middleware', async () => {
-        const request = new Uoyroem.FormActionRequest({ field: "test" });
-        const response = await Uoyroem.formActions.fetch(action, request);
-
-        expect(response.body).toEqual({ log: "Logged: test" });
-        expect(response.status).toBe(Uoyroem.FormActionResponseStatus.Success);
-    });
-
-    test('should apply single middleware and process handler', async () => {
-        action.addMiddleware(new ValidateFormActionMiddleware());
-        const request = new Uoyroem.FormActionRequest({ field: "test" });
-        const response = await Uoyroem.formActions.fetch(action, request);
-
-        expect(response.body).toEqual({ log: "Logged: test" });
-        expect(response.status).toBe(Uoyroem.FormActionResponseStatus.Success);
-    });
-
-    test('should stop execution on middleware error', async () => {
-        action.addMiddleware(new ValidateFormActionMiddleware());
-        const request = new Uoyroem.FormActionRequest({ field: "" });
-        const response = await Uoyroem.formActions.fetch(action, request);
-
-        expect(response.body).toEqual({ log: "Error: Field is empty" });
-        expect(response.status.code).toBe(400);
-        expect(response.status.description).toBe("Bad Request");
-    });
-
-    test('should apply multiple middlewares sequentially', async () => {
-        action.addMiddleware(new ValidateFormActionMiddleware());
-        action.addMiddleware(new LogTimeMiddleware());
-        const request = new Uoyroem.FormActionRequest({ field: "test" });
-        const response = await Uoyroem.formActions.fetch(action, request);
-
-        expect(response.body.log).toMatch(/^Logged: test \(took \d+ms\)$/);
-        expect(response.status).toBe(Uoyroem.FormActionResponseStatus.Success);
-    });
-
-    test('should handle async operations correctly', async () => {
-        action.addMiddleware(new LogTimeMiddleware());
-        const request = new Uoyroem.FormActionRequest({ field: "async" });
-        const startTime = Date.now();
-        const response = await Uoyroem.formActions.fetch(action, request);
-        const endTime = Date.now();
-
-        expect(endTime - startTime).toBeGreaterThanOrEqual(50); // Задержка от setTimeout
-        expect(response.body.log).toMatch(/^Logged: async \(took \d+ms\)$/);
-        expect(response.status).toBe(Uoyroem.FormActionResponseStatus.Success);
-    });
-
-    test('should call middlewares in correct order', async () => {
-        const middlewareOrder: string[] = [];
-        const firstMiddleware = new FirstOrderMiddleware(middlewareOrder);
-        const secondMiddleware = new SecondOrderMiddleware(middlewareOrder);
-
-        action.addMiddleware(firstMiddleware);
-        action.addMiddleware(secondMiddleware);
-
-        const request = new Uoyroem.FormActionRequest({ field: "order" });
-        await Uoyroem.formActions.fetch(action, request);
-
-        expect(middlewareOrder).toEqual(["first", "second"]);
-    });
+  test('fallback should create chain with additional registries', () => {
+    const mainRegistry = Uoyroem.Registry.get('main');
+    const chain = mainRegistry.fallback('fallback1', 'fallback2');
+    
+    expect(chain.registries.length).toBe(3);
+    expect(chain.registries[0].name).toBe('main');
+    expect(chain.registries[1].name).toBe('fallback1');
+    expect(chain.registries[2].name).toBe('fallback2');
+  });
 });
