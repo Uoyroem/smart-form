@@ -2,8 +2,8 @@ export class DependencyGraph<Key = string> {
     private _keys: Set<Key>;
     private _dependentMap: Map<Key, Set<Key>>;
     private _dependencyMap: Map<Key, Set<Key>>;
-    private _addedDependencies: [Key, Key][];
     private _topologicalOrder: Key[];
+    protected _addedDependencies: [Key, Key][];
 
     constructor() {
         this._keys = new Set<Key>();
@@ -72,6 +72,12 @@ export class DependencyGraph<Key = string> {
         this._addedDependencies.push([dependent, dependency]);
     }
 
+    clone(): DependencyGraph<Key> {
+        const graph = new DependencyGraph<Key>();
+        graph._addedDependencies = this._addedDependencies.slice();
+        return graph;
+    }
+
     get keys(): ReadonlySet<Key> {
         return this._keys;
     }
@@ -111,6 +117,13 @@ export class ValuedDependencyGraph<Value, Key = string> extends DependencyGraph<
             }
         }
         return super.getDependencies().concat(dependencies);
+    }
+
+    clone(): ValuedDependencyGraph<Value, Key> {
+        const graph = new ValuedDependencyGraph<Value, Key>();
+        graph._addedDependencies = [...this._addedDependencies];
+        graph._nodes = new Map(this._nodes);
+        return graph;
     }
 
     registerNode(node: Node<Key, Value>) {

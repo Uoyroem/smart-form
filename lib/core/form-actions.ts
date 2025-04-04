@@ -35,6 +35,10 @@ export interface NoResponse {
 }
 
 export class GetFieldValueHandler extends actions.Handler<FieldRequest, ValueResponse> {
+    constructor() {
+        super("GetFieldValue");
+    }
+
     async handle(request: actions.Request<FieldRequest>): Promise<actions.Response<ValueResponse>> {
         const value = request.body.field.getValue();
         return new actions.Response({ body: { value }, status: actions.Status.Ok })
@@ -42,6 +46,10 @@ export class GetFieldValueHandler extends actions.Handler<FieldRequest, ValueRes
 }
 
 export class GetFieldMetaValueHandler extends actions.Handler<FieldRequest & MetaRequest, ValueResponse> {
+    constructor() {
+        super("GetFieldMetaValue");
+    }
+
     async handle(request: actions.Request<FieldRequest & MetaRequest>): Promise<actions.Response<ValueResponse>> {
         const value = request.body.field.getMetaValue(request.body.metaKey);
         return new actions.Response({ body: { value }, status: actions.Status.Ok })
@@ -49,6 +57,10 @@ export class GetFieldMetaValueHandler extends actions.Handler<FieldRequest & Met
 }
 
 export class SetFieldValueHandler extends actions.Handler<FieldRequest & SetValueRequest, ChangedNamesResponse> {
+    constructor() {
+        super("SetFieldValue");
+    }
+
     async handle(request: actions.Request<FieldRequest & SetValueRequest>): Promise<actions.Response<ChangedNamesResponse>> {
         const changedNames = request.body.field.setValue(request.body.newValue);
         return new actions.Response({ body: { changedNames }, status: actions.Status.Ok })
@@ -56,6 +68,10 @@ export class SetFieldValueHandler extends actions.Handler<FieldRequest & SetValu
 }
 
 export class SetFieldMetaValueHandler extends actions.Handler<FieldRequest & MetaRequest & SetValueRequest, ChangedNamesResponse> {
+    constructor() {
+        super("SetFieldMetaValue");
+    }
+
     async handle(request: actions.Request<FieldRequest & MetaRequest & SetValueRequest>): Promise<actions.Response<ChangedNamesResponse>> {
         const changedNames = request.body.field.setMetaValue(request.body.metaKey, request.body.newValue);
         return new actions.Response({ body: { changedNames }, status: actions.Status.Ok })
@@ -63,6 +79,10 @@ export class SetFieldMetaValueHandler extends actions.Handler<FieldRequest & Met
 }
 
 export class GetElementValueHandler extends actions.Handler<ElementRequest, ValueResponse> {
+    constructor() {
+        super("GetElementValue");
+    }
+
     async handle(request: actions.Request<ElementRequest>): Promise<actions.Response<ValueResponse>> {
         const value = request.body.element.value;
         return new actions.Response({ body: { value }, status: actions.Status.Ok })
@@ -70,6 +90,10 @@ export class GetElementValueHandler extends actions.Handler<ElementRequest, Valu
 }
 
 export class GetElementMetaValueHandler extends actions.Handler<ElementRequest & MetaRequest, ValueResponse> {
+    constructor() {
+        super("GetElementMetaValue");
+    }
+
     async handle(request: actions.Request<ElementRequest & MetaRequest>): Promise<actions.Response<ValueResponse>> {
         let value: any;
         const element = request.body.element;
@@ -85,6 +109,10 @@ export class GetElementMetaValueHandler extends actions.Handler<ElementRequest &
 }
 
 export class SetElementValueHandler extends actions.Handler<ElementRequest & SetValueRequest, NoResponse> {
+    constructor() {
+        super("SetElementMeta");
+    }
+
     async handle(request: actions.Request<ElementRequest & SetValueRequest>): Promise<actions.Response<NoResponse>> {
         request.body.element.value = request.body.newValue;
         return new actions.Response({ body: {}, status: actions.Status.Ok })
@@ -93,6 +121,10 @@ export class SetElementValueHandler extends actions.Handler<ElementRequest & Set
 
 
 export class SetElementMetaValueHandler extends actions.Handler<ElementRequest & SetValueRequest, NoResponse> {
+    constructor() {
+        super("SetElementMetaValue");
+    }
+
     async handle(request: actions.Request<ElementRequest & SetValueRequest>): Promise<actions.Response<NoResponse>> {
         request.body.element.value = request.body.newValue;
         return new actions.Response({ body: {}, status: actions.Status.Ok })

@@ -1,3 +1,5 @@
+import { DependencyGraph } from "./dependency-graph";
+
 export class Request<Body> {
     public body: Body;
     public handlerRegistry: ChainedRegistry;
@@ -82,23 +84,22 @@ export function isActionError(error: unknown): error is ActionError {
 
 
 export abstract class Handler<RequestBody, ResponseBody> {
-    abstract handle(request: Request<RequestBody>): Promise<Response<ResponseBody>>;
-}
-
-export abstract class Middleware<RequestBody, ResponseBody> {
     constructor(public readonly key: string) { }
 
-
-    abstract handle(request: Request<RequestBody>, getResponse: () => Promise<Response<ResponseBody>>): Promise<Response<ResponseBody>>;
+    abstract handle(request: Request<RequestBody>, getResponse?: () => Promise<Response<ResponseBody>>): Promise<Response<ResponseBody>>;
 }
 
 export class DefaultHandler extends Handler<any, any> {
+    constructor() {
+        super("Default");
+    }
+
     async handle(request: Request<any>): Promise<Response<any>> {
         throw new ActionError({ response: new Response<ErrorResponseBody>({ body: { detail: "Not implemented" }, status: Status.NotImplemented }), cause: request });
     }
 }
 
-export class CheckErrorStatusMiddleware extends Middleware<any, any> {
+export class CheckErrorStatusMiddleware extends Handler<any, any> {
     constructor() {
         super("CheckErrorStatus");
     }
@@ -115,43 +116,21 @@ export class CheckErrorStatusMiddleware extends Middleware<any, any> {
 
 export class Action<RequestBody, ResponseBody> {
     public registryHandler: Map<Registry, Handler<RequestBody, ResponseBody>>;
-    public registryMiddlewares: Map<Registry, Map<string, Middleware<RequestBody, ResponseBody>>>;
 
     constructor() {
         this.registryHandler = new Map();
-        this.registryMiddlewares = new Map();
     }
 
-    getHandler(chainedRegistry: ChainedRegistry = Registry.get()) {
-        for (const registry of chainedRegistry.registries) {
-            if (!this.registryHandler.has(registry)) continue;
-            return this.registryHandler.get(registry)!;
-        }
-        return new DefaultHandler();
+    setHandler(handler: Handler<RequestBody, ResponseBody>, registry: Registry = Registry.get()) {
+        this.registryHandler.set(registry, handler);
     }
 
-    setHandler(handler: Handler<RequestBody, ResponseBody>, registry: ChainedRegistry = Registry.get()) {
-        this.registryHandler.set(registry.head, handler);
-    }
-
-    getMiddlewares(chainedRegistry: ChainedRegistry = Registry.get()): ReadonlyMap<string, Middleware<RequestBody, ResponseBody>> {
-        for (const registry of chainedRegistry.registries) {
-            if (!this.registryMiddlewares.has(registry)) continue;
-            return this.registryMiddlewares.get(registry)!;
-        }
-        return new Map();
-    }
-
-    addMiddleware(middleware: Middleware<RequestBody, ResponseBody>, registry: ChainedRegistry = Registry.get()): void {
-        if (!this.registryMiddlewares.has(registry.head)) {
-            this.registryMiddlewares.set(registry.head, new Map());
-        }
-        this.registryMiddlewares.get(registry.head)!.set(middleware.key, middleware);
-    }
-
-    async handle(request: Request<RequestBody>): Promise<Response<ResponseBody>> {
+    async handle(request: Request<RequestBody>, registry: RegistryGraph): Promise<Response<ResponseBody>> {
         let response;
         try {
+            for (const name in registry.graph.topologicalOrder) {
+                
+            }
             response = await Array.from(this.getMiddlewares(request.middlewaresRegistry).values()).reduceRight(
                 (getResponse, middleware) => async () => await middleware.handle(request, getResponse),
                 async () => this.getHandler(request.handlerRegistry).handle(request)
@@ -177,20 +156,22 @@ export class RedirectHandler {
 }
 
 export interface ChainedRegistry {
-    get head(): Registry;
-    readonly registries: readonly Registry[];
-    fallback(...names: string[]): RegistryChain;
+    
 }
 
-export class RegistryChain implements ChainedRegistry {
-    constructor(public readonly registries: Registry[]) { }
+export class RegistryGraph implements ChainedRegistry {
+    constructor(public readonly current: Registry, public readonly graph: DependencyGraph<string>) { }
 
-    get head(): Registry {
-        return this.registries[0];
+    before(name: string) {
+        const registry = Registry.get(name);
+        this.graph.addDependency(this.current.name, name);
+        return new RegistryGraph(registry, this.graph.clone());
     }
 
-    fallback(...names: string[]): RegistryChain {
-        return new RegistryChain(this.registries.concat(names.map(name => Registry.get(name))));
+    after(name: string) {
+        const registry = Registry.get(name);
+        this.graph.addDependency(name, this.current.name);
+        return new RegistryGraph(registry, this.graph.clone());
     }
 }
 
