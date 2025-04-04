@@ -88,3 +88,36 @@ export class DependencyGraph<Key = string> {
         return this._dependencyMap;
     }
 }
+
+export interface Node<Key, Value> {
+    readonly key: Key;
+    readonly value: Value;
+    readonly dependsOn: readonly Key[];
+}
+
+export class ValuedDependencyGraph<Value, Key = string> extends DependencyGraph<Key> {
+    private _nodes: Map<Key, Node<Key, Value>>;
+
+    constructor() {
+        super();
+        this._nodes = new Map();
+    }
+
+    override getDependencies(): readonly [Key, Key][] {
+        const dependencies: [Key, Key][] = [];
+        for (const [key, valueKey] of this._nodes.entries()) {
+            for (const dependency of valueKey.dependsOn) {
+                dependencies.push([key, dependency]);
+            }
+        }
+        return super.getDependencies().concat(dependencies);
+    }
+
+    registerNode(node: Node<Key, Value>) {
+        this._nodes.set(node.key, node);
+    }
+
+    getNode(key: Key): Node<Key, Value> | undefined {
+        return this._nodes.get(key);
+    }
+}

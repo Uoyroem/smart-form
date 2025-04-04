@@ -1,5 +1,4 @@
 import { EffectManager } from "./effect-manager";
-import { FormAction, FormActionHandler, FormActionRegistry, FormActionRequest, FormActionRequestBody, FormActionResponseBody, FormActionResponse, FormActionResponseStatus } from "./form-action";
 
 function deepEqual(a: any, b: any): boolean {
     if (a === b) return true;
@@ -25,8 +24,6 @@ export function getMetaDependencyKey(fieldName: string, metaKey: string) {
     return `${fieldName}:${metaKey}`;
 }
 
-
-
 export class FormFieldValidator {
     public name: string;
 
@@ -48,49 +45,6 @@ export class FormFieldValidatorRequired extends FormFieldValidator {
 
     }
 }
-
-export interface FormActionFieldValueRequestBody extends FormActionRequestBody {
-    field: FormField;
-}
-
-export interface FormActionFieldMetaValueRequestBody extends FormActionRequestBody {
-    field: FormField;
-    metaKey: string;
-}
-
-export interface FormActionElementValueRequestBody extends FormActionRequestBody {
-    element: Element;
-}
-
-export interface FormActionElementMetaValueRequestBody extends FormActionRequestBody {
-    element: Element;
-    metaKey: string;
-}
-
-export interface FormActionValueResponseBody extends FormActionResponseBody {
-    value: any;
-}
-
-export interface FormActionMetaValueResponseBody extends FormActionResponseBody {
-    value: any;
-}
-
-class FormGetFieldValueActionHandler extends FormActionHandler<FormActionFieldValueRequestBody, FormActionValueResponseBody> {
-    override async handle(request: FormActionRequest<FormActionFieldValueRequestBody>, registry: FormActionRegistry): Promise<FormActionResponse<FormActionValueResponseBody>> {
-        return new FormActionResponse({ value: request.body.field.getValue() }, FormActionResponseStatus.Success)
-    }
-}
-
-class FormGetFieldMetaValueActionHandler extends FormActionHandler<FormActionFieldMetaValueRequestBody, FormActionMetaValueResponseBody> {
-    override async handle(request: FormActionRequest<FormActionFieldMetaValueRequestBody>, registry: FormActionRegistry): Promise<FormActionResponse<FormActionMetaValueResponseBody>> {
-        return new FormActionResponse({ value: request.body.field.getMetaValue(request.body.metaKey) }, FormActionResponseStatus.Success)
-    }
-}
-
-
-const getFieldValue = new FormAction(new FormGetFieldValueActionHandler());
-const getFieldMetaValue = new FormAction(new FormGetFieldMetaValueActionHandler());
-
 
 export type FormElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
@@ -1306,27 +1260,33 @@ export class Form extends EventTarget {
     }
 
     addDisableWhenEffect(fieldName: string, disableWhen: () => Promise<boolean> | boolean, dependsOn: string[]): void {
-        this.effectManager.addEffect(getMetaDependencyKey(fieldName, "disabled"), {
-            type: "disable-when",
-            callback: async () => {
-                const disabled = await disableWhen();
-                // console.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
-                const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                return field.setMetaValue("disabled", disabled, { processChanges: true });
+        this.effectManager.registerNode({
+            key: getMetaDependencyKey(fieldName, "disabled"),
+            value: {
+                type: "disable-when",
+                callback: async () => {
+                    const disabled = await disableWhen();
+                    // console.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
+                    const field = this.fields.get(fieldName).getAdapter({ initiator: this });
+                    return field.setMetaValue("disabled", disabled, { processChanges: true });
+                },
             },
-            dependsOn,
+            dependsOn
         });
     }
 
     addVisibleWhenEffect(fieldName: string, visibleWhen: () => Promise<boolean> | boolean, dependsOn: string[]): void {
         this.addDisableWhenEffect(fieldName, async () => !await visibleWhen(), dependsOn);
-        this.effectManager.addEffect(getMetaDependencyKey(fieldName, "visible"), {
-            type: "visible-when",
-            callback: async () => {
-                const visible = await visibleWhen();
-                // console.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
-                const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                return field.setMetaValue("visible", visible, { processChanges: true });
+        this.effectManager.registerNode({
+            key: getMetaDependencyKey(fieldName, "visible"),
+            value: {
+                type: "visible-when",
+                callback: async () => {
+                    const visible = await visibleWhen();
+                    // console.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
+                    const field = this.fields.get(fieldName).getAdapter({ initiator: this });
+                    return field.setMetaValue("visible", visible, { processChanges: true });
+                },
             },
             dependsOn: [getMetaDependencyKey(fieldName, "disabled")]
         });
@@ -1334,13 +1294,16 @@ export class Form extends EventTarget {
 
     addComputedFieldEffect(fieldName: string, fieldType: FormFieldType, compute: () => Promise<any> | any, dependsOn: string[]): void {
         this.fields.add(new FormField(fieldName, fieldType, { changeSet: this.changeSet, effectManager: this.effectManager }))
-        this.effectManager.addEffect(fieldName, {
-            type: "computed-field",
-            callback: async () => {
-                const value = await compute();
-                // console.log(`[Effect.ComputedField] Field ${fieldName} value: `, value);
-                const field = this.fields.get(fieldName);
-                return field.setValue(value, { initiator: this, processChanges: true });
+        this.effectManager.registerNode({
+            key: fieldName,
+            value: {
+                type: "computed-field",
+                callback: async () => {
+                    const value = await compute();
+                    // console.log(`[Effect.ComputedField] Field ${fieldName} value: `, value);
+                    const field = this.fields.get(fieldName);
+                    return field.setValue(value, { initiator: this, processChanges: true });
+                },
             },
             dependsOn
         });
@@ -1348,45 +1311,51 @@ export class Form extends EventTarget {
 
     addFieldAutofillEffect(fieldName: string, autofillWith: () => Promise<any> | any, dependsOn: string[]): void {
         this.effectManager.addDependency(fieldName, getMetaDependencyKey(fieldName, "autofill"));
-        this.effectManager.addEffect(getMetaDependencyKey(fieldName, "autofill"), {
-            type: "field-autofill",
-            callback: async () => {
-                const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                const dirty = field.getMetaValue("dirty");
-                field.setMetaValue("autofill", !dirty);
-                if (dirty) {
+        this.effectManager.registerNode({
+            key: getMetaDependencyKey(fieldName, "autofill"),
+            value: {
+                type: "field-autofill",
+                callback: async () => {
+                    const field = this.fields.get(fieldName).getAdapter({ initiator: this });
+                    const dirty = field.getMetaValue("dirty");
+                    field.setMetaValue("autofill", !dirty);
+                    if (dirty) {
+                        return field.processChanges();
+                    }
+                    const value = await autofillWith();
+                    // console.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
+                    field.setMetaValue("autofill", field.setValue(value).size !== 0);
                     return field.processChanges();
-                }
-                const value = await autofillWith();
-                // console.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
-                field.setMetaValue("autofill", field.setValue(value).size !== 0);
-                return field.processChanges();
+                },
             },
             dependsOn: [getMetaDependencyKey(fieldName, "dirty"), ...dependsOn]
         });
     }
 
     addSelectOptionsInitializerEffect(fieldName: string, getDefaultOption: () => Promise<Option> | Option, getOptions: () => Promise<Option[]> | Option[], dependsOn: string[]): void {
-        this.effectManager.addEffect(fieldName, {
-            type: "select-options-initializer",
-            callback: async () => {
-                const defaultOption = await getDefaultOption();
-                const options = await getOptions();
-                const selectElement = this.getElement(fieldName) as HTMLSelectElement;
-                const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                const selectedValue = field.getValue({ disabledIsNull: false });
-                field.setValue(defaultOption.value);
-                selectElement.innerHTML = "";
-                for (const option of [defaultOption, ...options]) {
-                    const optionElement = document.createElement("option");
-                    optionElement.value = option.value;
-                    optionElement.textContent = option.textContent;
-                    selectElement.options.add(optionElement);
-                }
-                field.setValue(selectedValue);
-                field.setMetaValue("disabled", options.length === 0);
-                field.setMetaValue("optionsInitialized", options.length !== 0);
-                return field.processChanges();
+        this.effectManager.registerNode({
+            key: fieldName,
+            value: {
+                type: "select-options-initializer",
+                callback: async () => {
+                    const defaultOption = await getDefaultOption();
+                    const options = await getOptions();
+                    const selectElement = this.getElement(fieldName) as HTMLSelectElement;
+                    const field = this.fields.get(fieldName).getAdapter({ initiator: this });
+                    const selectedValue = field.getValue({ disabledIsNull: false });
+                    field.setValue(defaultOption.value);
+                    selectElement.innerHTML = "";
+                    for (const option of [defaultOption, ...options]) {
+                        const optionElement = document.createElement("option");
+                        optionElement.value = option.value;
+                        optionElement.textContent = option.textContent;
+                        selectElement.options.add(optionElement);
+                    }
+                    field.setValue(selectedValue);
+                    field.setMetaValue("disabled", options.length === 0);
+                    field.setMetaValue("optionsInitialized", options.length !== 0);
+                    return field.processChanges();
+                },
             },
             dependsOn
         });
