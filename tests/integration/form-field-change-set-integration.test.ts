@@ -10,7 +10,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field = new Uoyroem.FormField('test', Uoyroem.FormFieldType.text(), { changeSet });
     });
 
-    it('should track value changes and mark as processed', () => {
+    it('should track value changes and mark as processed', async () => {
         // 1. Устанавливаем значение без обработки
         field.setValue('initial', { raw: true });
 
@@ -22,16 +22,16 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         expect(change.processed).toBe(false);
 
         // 3. Обрабатываем изменения
-        const changedNames = field.processChanges();
+        const changedNames = await field.processChanges();
 
         // 4. Проверяем, что изменение помечено как обработанное
         expect(change.processed).toBe(true);
         expect(changedNames).toEqual(new Set(['test']));
     });
 
-    it('should handle metaValue changes with dependencies', () => {
+    it('should handle metaValue changes with dependencies', async () => {
         // 1. Устанавливаем мета-значение
-        const changedNames = field.setMetaValue('disabled', true, { raw: true });
+        const changedNames = await field.setMetaValue('disabled', true, { raw: true });
         expect(changedNames).toEqual(new Set(['test:disabled']));
 
         const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.MetaValue });
@@ -40,10 +40,10 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         expect(change.metaKey).toBe('disabled');
     });
 
-    it('should only return last unprocessed changes', () => {
+    it('should only return last unprocessed changes', async () => {
         // 1. Делаем несколько изменений
-        field.setValue('first', { raw: true });
-        field.setValue('second', { raw: true });
+        await field.setValue('first', { raw: true });
+        await field.setValue('second', { raw: true });
 
         // 2. Получаем ТОЛЬКО последнее изменение
         const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.Value });
@@ -52,13 +52,13 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         expect(change.newValue).toBe("second");
     });
 
-    it('should handle multiple state keys', () => {
+    it('should handle multiple state keys', async () => {
         // 1. Создаем второе состояние
-        field.switchState({ stateKey: 'alternative' });
-        field.setValue('alt-value', { raw: true, stateKey: 'alternative' });
+        await field.switchState({ stateKey: 'alternative' });
+        await field.setValue('alt-value', { raw: true, stateKey: 'alternative' });
 
         // 2. Проверяем изолированность состояний
-        expect(field.getValue({ stateKey: 'default', raw: true })).toBeNull();
-        expect(field.getValue({ stateKey: 'alternative', raw: true })).toBe('alt-value');
+        expect(await field.getValue({ stateKey: 'default', raw: true })).toBeNull();
+        expect(await field.getValue({ stateKey: 'alternative', raw: true })).toBe('alt-value');
     });
 });

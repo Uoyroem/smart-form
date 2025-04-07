@@ -28,61 +28,61 @@ describe('FormFieldElementLinker', () => {
         linker = new Uoyroem.FormFieldElementLinker(formField, inputElement);
     });
 
-    it('should link field to element and sync initial value', () => {
+    it('should link field to element and sync initial value', async () => {
         // Устанавливаем начальное значение в элемент
         inputElement.value = "test-user";
-        linker.link();
+        await linker.link();
 
         // Проверяем, что значение синхронизировалось в FormField
-        expect(formField.getValue({ raw: true })).toBe("test-user");
+        expect(await formField.getValue({ raw: true })).toBe("test-user");
     });
 
-    it('should sync value from field to element', () => {
-        linker.link();
+    it('should sync value from field to element', async () => {
+        await linker.link();
 
         // Меняем значение в FormField
-        formField.setValue("new-value", { raw: true, processChanges: true });
+        await formField.setValue("new-value", { raw: true, processChanges: true });
 
         // Проверяем, что элемент обновился
         expect(inputElement.value).toBe("new-value");
     });
 
-    it('should sync value from element to field on input', () => {
-        linker.link();
+    it('should sync value from element to field on input', async () => {
+        await linker.link();
 
         // Эмулируем ввод в input
         inputElement.value = "user-typed";
         inputElement.dispatchEvent(new InputEvent("input"));
 
         // Проверяем, что FormField получил новое значение
-        expect(formField.getValue({ raw: true })).toBe("user-typed");
+        expect(await formField.getValue({ raw: true })).toBe("user-typed");
     });
 
-    it('should handle disabled state', () => {
-        linker.link();
+    it('should handle disabled state', async () => {
+        await linker.link();
 
         // Отключаем поле
-        formField.setMetaValue("disabled", true, { raw: true, processChanges: true });
+        await formField.setMetaValue("disabled", true, { raw: true, processChanges: true });
 
         // Проверяем, что элемент тоже отключился
         expect(inputElement.disabled).toBe(true);
     });
 
-    it('should unlink and stop syncing', () => {
-        linker.link();
-        linker.unlink();
+    it('should unlink and stop syncing', async () => {
+        await linker.link();
+        await linker.unlink();
 
         // Меняем значение в FormField
-        formField.setValue("should-not-sync", { raw: true, processChanges: true });
+        await formField.setValue("should-not-sync", { raw: true, processChanges: true });
 
         // Проверяем, что элемент НЕ обновился
         expect(inputElement.value).not.toBe("should-not-sync");
     });
 
-    it('should sync visible meta to element', () => {
-        linker.link();
-        formField.setMetaValue("visible", false, { raw: true, processChanges: true });
-        const container = formField.getMetaValue("container");
+    it('should sync visible meta to element', async () => {
+        await linker.link();
+        await formField.setMetaValue("visible", false, { raw: true, processChanges: true });
+        const container = await formField.getMetaValue("container");
         container.dispatchEvent(new Event('transitionend'));
         
         // Предполагаем, что изменение `visible` влияет на атрибут или стиль
@@ -95,7 +95,7 @@ describe('FormFieldElementLinker (Radio)', () => {
     let radioElement: HTMLInputElement;
     let linker: Uoyroem.FormFieldElementLinker;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         formField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio());
         radioElement = document.createElement("input");
         radioElement.type = "radio";
@@ -103,32 +103,32 @@ describe('FormFieldElementLinker (Radio)', () => {
         radioElement.value = "male";
 
         linker = new Uoyroem.FormFieldElementLinker(formField, radioElement);
-        linker.link();
+        await linker.link();
     });
 
-    it('should sync checked state to field when selected', () => {
+    it('should sync checked state to field when selected', async () => {
         radioElement.checked = true;
         radioElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getMetaValue("checked")).toBe(true);
-        expect(formField.getValue()).toBe("male");
+        expect(await formField.getMetaValue("checked")).toBe(true);
+        expect(await formField.getValue()).toBe("male");
     });
 
-    it('should sync unchecked state to field', () => {
+    it('should sync unchecked state to field', async () => {
         radioElement.checked = false;
         radioElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getMetaValue("checked")).toBe(false);
-        expect(formField.getValue()).toBe(null); // Нет выбора
+        expect(await formField.getMetaValue("checked")).toBe(false);
+        expect(await formField.getValue()).toBe(null); // Нет выбора
     });
 
-    it('should update element when field value matches', () => {
-        formField.setValue("male", { processChanges: true });
+    it('should update element when field value matches', async () => {
+        await formField.setValue("male", { processChanges: true });
         expect(radioElement.checked).toBe(true);
     });
 
-    it('should not check element if value does not match', () => {
-        formField.setValue("female", { processChanges: true });
+    it('should not check element if value does not match', async () => {
+        await formField.setValue("female", { processChanges: true });
         expect(radioElement.checked).toBe(false);
     });
 });
@@ -138,30 +138,30 @@ describe('FormFieldElementLinker (Checkbox)', () => {
     let checkboxElement: HTMLInputElement;
     let linker: Uoyroem.FormFieldElementLinker;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         formField = new Uoyroem.FormField("agree", Uoyroem.FormFieldType.checkbox());
         checkboxElement = document.createElement("input");
         checkboxElement.type = "checkbox";
         checkboxElement.name = "agree";
 
         linker = new Uoyroem.FormFieldElementLinker(formField, checkboxElement);
-        linker.link();
+        await linker.link();
     });
 
-    it('should sync checked state to field', () => {
+    it('should sync checked state to field', async () => {
         checkboxElement.checked = true;
         checkboxElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getMetaValue("checked")).toBe(true);
-        expect(formField.getValue()).toBe(true); // Для чекбокса значение === checked
+        expect(await formField.getMetaValue("checked")).toBe(true);
+        expect(await formField.getValue()).toBe(true); // Для чекбокса значение === checked
     });
 
-    it('should handle unchecked state', () => {
+    it('should handle unchecked state', async () => {
         checkboxElement.checked = false;
         checkboxElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getMetaValue("checked")).toBe(false);
-        expect(formField.getValue()).toBe(false);
+        expect(await formField.getMetaValue("checked")).toBe(false);
+        expect(await formField.getValue()).toBe(false);
     });
 });
 
@@ -170,7 +170,7 @@ describe('FormFieldElementLinker (Select)', () => {
     let selectElement: HTMLSelectElement;
     let linker: Uoyroem.FormFieldElementLinker;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         formField = new Uoyroem.FormField("country", Uoyroem.FormFieldType.select());
         selectElement = document.createElement("select");
         selectElement.name = "country";
@@ -187,14 +187,14 @@ describe('FormFieldElementLinker (Select)', () => {
         selectElement.appendChild(option2);
 
         linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
-        linker.link();
+        await linker.link();
     });
 
-    it('should sync selected value to field', () => {
+    it('should sync selected value to field', async () => {
         selectElement.value = "us";
         selectElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getValue()).toBe("us");
+        expect(await formField.getValue()).toBe("us");
     });
 });
 
@@ -203,7 +203,7 @@ describe('FormFieldElementLinker (Select Multiple)', () => {
     let selectElement: HTMLSelectElement;
     let linker: Uoyroem.FormFieldElementLinker;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         formField = new Uoyroem.FormField("fruits", Uoyroem.FormFieldType.select({ multiple: true }));
         selectElement = document.createElement("select");
         selectElement.name = "fruits";
@@ -217,19 +217,19 @@ describe('FormFieldElementLinker (Select Multiple)', () => {
         });
 
         linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
-        linker.link();
+        await linker.link();
     });
 
-    it('should sync multiple selected values to field', () => {
+    it('should sync multiple selected values to field', async () => {
         selectElement.options[0].selected = true; // apple
         selectElement.options[2].selected = true; // cherry
         selectElement.dispatchEvent(new Event("change"));
 
-        expect(formField.getValue()).toEqual(["apple", "cherry"]);
+        expect(await formField.getValue()).toEqual(["apple", "cherry"]);
     });
 
-    it('should sync multiple values from field to element', () => {
-        formField.setValue(["banana", "cherry"], { processChanges: true });
+    it('should sync multiple values from field to element', async () => {
+        await formField.setValue(["banana", "cherry"], { processChanges: true });
 
         expect(selectElement.options[1].selected).toBe(true); // banana
         expect(selectElement.options[2].selected).toBe(true); // cherry
@@ -242,24 +242,24 @@ describe('FormFieldElementLinker (Number)', () => {
     let numberElement: HTMLInputElement;
     let linker: Uoyroem.FormFieldElementLinker;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         formField = new Uoyroem.FormField("age", Uoyroem.FormFieldType.number());
         numberElement = document.createElement("input");
         numberElement.type = "number";
         numberElement.name = "age";
 
         linker = new Uoyroem.FormFieldElementLinker(formField, numberElement);
-        linker.link();
+        await linker.link();
     });
 
-    it('should sync numeric value from field to element', () => {
-        formField.setValue(25, { raw: true, processChanges: true });
+    it('should sync numeric value from field to element', async () => {
+        await formField.setValue(25, { raw: true, processChanges: true });
         expect(numberElement.value).toBe("25");
     });
 
-    it('should sync numeric value from element to field', () => {
+    it('should sync numeric value from element to field', async () => {
         numberElement.value = "30";
         numberElement.dispatchEvent(new InputEvent("input"));
-        expect(formField.getValue({ raw: true })).toBe("30");
+        expect(await formField.getValue({ raw: true })).toBe("30");
     });
 });

@@ -11,21 +11,21 @@ describe("Form with Radio Buttons", () => {
     await form.setup();
 
     maleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
-    maleRadioField.setValue("male", { raw: true, processChanges: true });
+    await maleRadioField.setValue("male", { raw: true, processChanges: true });
     form.fields.add(maleRadioField);
 
     femaleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
-    femaleRadioField.setValue("female", { raw: true, processChanges: true });
+    await femaleRadioField.setValue("female", { raw: true, processChanges: true });
     form.fields.add(femaleRadioField);
   });
 
-  it("should uncheck other radios when one is checked", () => {
-    maleRadioField.setMetaValue("checked", true, { processChanges: true });
-    femaleRadioField.setMetaValue("checked", true, { processChanges: true });
+  it("should uncheck other radios when one is checked", async () => {
+    await maleRadioField.setMetaValue("checked", true, { processChanges: true });
+    await femaleRadioField.setMetaValue("checked", true, { processChanges: true });
 
-    expect(maleRadioField.getMetaValue("checked")).toBe(false);
-    expect(femaleRadioField.getMetaValue("checked")).toBe(true);
+    expect(await maleRadioField.getMetaValue("checked")).toBe(false);
+    expect(await femaleRadioField.getMetaValue("checked")).toBe(true);
 
-    expect(form.fields.get("gender").getValue()).toBe("female");
+    expect(await form.fields.get("gender").getValue()).toBe("female");
   });
 });

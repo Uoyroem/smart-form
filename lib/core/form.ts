@@ -1,5 +1,9 @@
 
+import * as actions from "./actions";
+import { Request } from "./actions";
 import { EffectManager } from "./effect-manager";
+import * as formActions from "./form-actions";
+
 
 function deepEqual(a: any, b: any): boolean {
     if (a === b) return true;
@@ -117,82 +121,14 @@ export class FormFieldType {
         }
     }
 
-    public name: string;
-
-    constructor(name: string) {
-        this.name = name;
+    public registrySequence: actions.RegistrySequence;
+    constructor(public readonly name: string) {
+        this.registrySequence = actions.Registry.fallback(`type-${name}`, "root");
     }
 
     isEqual(a: any, b: any): boolean { return a === b; }
     isEmpty() { }
     asElementType() { return "hidden"; }
-
-    fetch() {
-    }
-
-    getFieldValue(field: FormField): any {
-        return field.getValue();
-    }
-
-    getFieldMetaValue(field: FormField, metaKey: string): any {
-        return field.getMetaValue(metaKey);
-    }
-
-    setFieldValue(field: FormField, newValue: any): Set<string> {
-        return field.setValue(newValue);
-    }
-
-    setFieldMetaValue(field: FormField, metaKey: string, newValue: any): Set<string> {
-        return field.setMetaValue(metaKey, newValue);
-    }
-
-    getElementValue(element: Element): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [null, FormFieldTypeElementStatus.INVALID_ELEMENT];
-        }
-        if (element.type !== this.asElementType()) {
-            return [null, FormFieldTypeElementStatus.TYPE_MISMATCH];
-        }
-        return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
-    }
-
-    setElementValue(element: Element, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
-        }
-        if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
-        }
-        element.value = newValue;
-        return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
-    }
-
-    getElementMetaValue(element: Element, metaKey: string): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
-        }
-        if (element.type !== this.asElementType()) {
-            return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
-        }
-        if (metaKey === "disabled") {
-            return [element.disabled, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
-        }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS]
-    }
-
-    setElementMetaValue(element: Element, metaKey: string, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
-        }
-        if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
-        }
-        if (metaKey === "disabled") {
-            element.disabled = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
-        }
-        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
-    }
 
     getInitialValue(): any {
         return null;
@@ -267,35 +203,6 @@ export class FormFieldTypeRadio extends FormFieldType {
         meta.set("checked", false);
         return meta;
     }
-
-    override getFieldValue(field: FormField): any {
-        return field.getMetaValue("checked") ? field.getValue() : null;
-    }
-
-    override setFieldValue(field: FormField, newValue: any): any {
-        return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
-    }
-
-    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
-        const [value, status] = super.getElementMetaValue(element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
-            return [value, status];
-        }
-        if (metaKey === "checked") {
-            return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
-        }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
-    }
-
-    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
-        const status = super.setElementMetaValue(element, metaKey, newValue);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
-        if (metaKey === "checked") {
-            element.checked = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
-        }
-        return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
-    }
 }
 
 export class FormFieldTypeCheckbox extends FormFieldType {
@@ -312,38 +219,6 @@ export class FormFieldTypeCheckbox extends FormFieldType {
         meta.set("checked", false);
         return meta;
     }
-
-    override getFieldValue(field: FormField): any {
-        const value = field.getValue();
-        if (["", "on"].includes(value)) return field.getMetaValue("checked");
-        return field.getMetaValue("checked") ? value : null;
-    }
-
-    override setFieldValue(field: FormField, newValue: any): any {
-        if (["", "on"].includes(field.getValue())) return field.setMetaValue("checked", newValue);
-        return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
-    }
-
-    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
-        const [value, status] = super.getElementMetaValue(element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
-            return [value, status];
-        }
-        if (metaKey === "checked") {
-            return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
-        }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
-    }
-
-    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
-        const status = super.setElementMetaValue(element, metaKey, newValue);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
-        if (metaKey === "checked") {
-            element.checked = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
-        }
-        return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
-    }
 }
 
 export class FormFieldTypeSelect extends FormFieldType {
@@ -351,7 +226,7 @@ export class FormFieldTypeSelect extends FormFieldType {
     private _of: FormFieldType;
 
     constructor() {
-        super("select");
+        super("Select");
         this._multiple = false;
         /**
          * @type {FormFieldType}
@@ -377,43 +252,6 @@ export class FormFieldTypeSelect extends FormFieldType {
     of(type: FormFieldType): this {
         this._of = type;
         return this;
-    }
-
-    override getElementValue(element: HTMLSelectElement): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
-        }
-        if (element.type !== this.asElementType()) {
-            return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
-        }
-        if (this._multiple) {
-            return [Array.from(element.selectedOptions, option => option.value), FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
-        }
-        return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
-    }
-
-    override setElementValue(element: HTMLSelectElement, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
-        }
-        if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
-        }
-        let options: (HTMLOptionElement | null)[];
-        if (this._multiple) {
-            options = newValue.map((value: any): HTMLOptionElement | null => {
-                return element.querySelector(`option[value="${value}"]`);
-            });
-        } else {
-            options = [
-                element.querySelector(`option[value="${newValue}"]`)
-            ]
-        }
-        if (options.some(option => option == null)) return FormFieldTypeElementStatus.FAILED_TO_SET_VALUE;
-        (options as HTMLOptionElement[]).forEach(option => {
-            option.selected = true;
-        });
-        return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
     }
 }
 
@@ -574,7 +412,7 @@ export class FormFieldChangeSet {
         return changedNames;
     }
 
-    processChanges(field: FormField, type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
+    async processChanges(field: FormField, type: FormFieldChangeType | null = null, dryRun: boolean = false): Promise<Set<string>> {
         const lastChanges = this.getFieldChanges(field, { onlyCurrentState: true, type });
         if (!dryRun) {
             this.markProcessed(this.getFieldChanges(field, { onlyCurrentState: true, last: null, type }));
@@ -657,29 +495,29 @@ export class FormField extends EventTarget {
         this._initialMeta = new Map();
     }
 
-    reset({ stateKey = null, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
+    async reset({ stateKey = null, initiator = null, processChanges = false }: FormFieldContext = {}): Promise<Set<string>> {
         stateKey ??= this._currentStateKey;
         console.log("[FormField.reset] Reset state `%s` for field `%s`", stateKey, this.name);
-        this.setValue(this._initialValue, { raw: true, stateKey, initiator });
+        await this.setValue(this._initialValue, { raw: true, stateKey, initiator });
         for (const [metaKey, value] of this._initialMeta.entries()) {
-            this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
+            await this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
         }
-        return this.processChanges(null, !processChanges);
+        return await this.processChanges(null, !processChanges);
     }
 
-    initializeState({ stateKey, initiator = null }: FormFieldContext & { stateKey: string }): void {
+    async initializeState({ stateKey, initiator = null }: FormFieldContext & { stateKey: string }): Promise<void> {
         if (!this._initializedStateKeys.has(stateKey)) {
             console.log("[FormField.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
             this._initializedStateKeys.add(stateKey);
             this._valueMap.set(stateKey, null);
             this._metaMap.set(stateKey, new Map());
-            this.reset({ stateKey, initiator, processChanges: true });
+            await this.reset({ stateKey, initiator, processChanges: true });
         }
     }
 
-    switchState({ stateKey, initiator = null, processChanges = false }: FormFieldContext & { stateKey: string }): Set<string> {
+    async switchState({ stateKey, initiator = null, processChanges = false }: FormFieldContext & { stateKey: string }): Promise<Set<string>> {
         console.log("[FormField.switchState] Switching state for field `%s` from `%s` to `%s`", this.name, this._currentStateKey, stateKey);
-        this.initializeState({ stateKey, initiator });
+        await this.initializeState({ stateKey, initiator });
         const oldValue = this._valueMap.get(this._currentStateKey);
         const newValue = this._valueMap.get(stateKey);
         if (!this.type.isEqual(oldValue, newValue)) {
@@ -716,7 +554,7 @@ export class FormField extends EventTarget {
             }
         }
         this._currentStateKey = stateKey;
-        return this.processChanges(null, !processChanges);
+        return await this.processChanges(null, !processChanges);
     }
 
     /**
@@ -759,28 +597,29 @@ export class FormField extends EventTarget {
         });
     }
 
-    getValue({ stateKey = null, raw = false, disabledIsNull = true }: FormFieldContext = {}): any {
+    async getValue({ stateKey = null, raw = false, disabledIsNull = true }: FormFieldContext = {}): Promise<any> {
         if (raw) {
             stateKey ??= this._currentStateKey
-            this.initializeState({ stateKey });
+            await this.initializeState({ stateKey });
             return this._valueMap.get(stateKey);
         }
-        if (disabledIsNull && this.getMetaValue("disabled", { stateKey })) {
+        if (disabledIsNull && await this.getMetaValue("disabled", { stateKey })) {
             return null;
         }
-        return this.type.getFieldValue(this.getAdapter({ stateKey, raw: true }));
+        const response = await formActions.getFieldValueAction.handle(new Request({ body: { field: this.getAdapter({ stateKey, raw: true }) } }));
+        return response.body.value;
     }
 
     setInitialValue(newValue: any): void {
         this._initialValue = newValue;
     }
 
-    setValue(newValue: any, { stateKey = null, raw = false, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
+    async setValue(newValue: any, { stateKey = null, raw = false, initiator = null, processChanges = false }: FormFieldContext = {}): Promise<Set<string>> {
         if (raw) {
             initiator ??= this;
             stateKey ??= this._currentStateKey;
-            this.initializeState({ stateKey, initiator });
-            const oldValue = this.getValue({ stateKey, raw: true });
+            await this.initializeState({ stateKey, initiator });
+            const oldValue = await this.getValue({ stateKey, raw: true });
             if (this.type.isEqual(oldValue, newValue)) return new Set();
             this._valueMap.set(stateKey, newValue);
             const change: FormFieldChange = {
@@ -796,31 +635,33 @@ export class FormField extends EventTarget {
             };
             console.log("[FormField.setValue] Value changed:", { oldValue, newValue, stateKey });
             this.changeSet.add(change);
-            return this.processChanges(FormFieldChangeType.Value, !processChanges);
+            return await this.processChanges(FormFieldChangeType.Value, !processChanges);
         }
-        return this.type.setFieldValue(this.getAdapter({ stateKey, raw: true, processChanges, initiator }), newValue);
+        const response = await formActions.setFieldValueAction.handle(new Request({ body: { field: this.getAdapter({ stateKey, raw: true }), newValue } }));
+        return response.body.changedNames;
     }
 
-    getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): any {
+    async getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): Promise<any> {
         if (raw) {
             stateKey ??= this._currentStateKey
-            this.initializeState({ stateKey });
+            await this.initializeState({ stateKey });
             const meta = this._metaMap.get(stateKey);
             return meta!.get(metaKey);
         }
-        return this.type.getFieldMetaValue(this.getAdapter({ raw: true, stateKey }), metaKey);
+        const response = await formActions.getFieldMetaValueAction.handle(new Request({ body: { field: this.getAdapter({ stateKey, raw: true }), metaKey } }));
+        return response.body.value;
     }
 
     setInitialMetaValue(metaKey: string, newValue: any): void {
         this._initialMeta.set(metaKey, newValue);
     }
 
-    setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
+    async setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Promise<Set<string>> {
         if (raw) {
             initiator ??= this;
             stateKey ??= this._currentStateKey;
-            this.initializeState({ stateKey, initiator });
-            const oldValue = this.getMetaValue(metaKey, { stateKey });
+            await this.initializeState({ stateKey, initiator });
+            const oldValue = await this.getMetaValue(metaKey, { stateKey });
             if (oldValue === newValue) return new Set();
             this._metaMap.get(stateKey)!.set(metaKey, newValue);
             const change: FormFieldChange = {
@@ -837,13 +678,14 @@ export class FormField extends EventTarget {
             };
             this.changeSet.add(change);
             console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
-            return this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
+            return await this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
         }
-        return this.type.setFieldMetaValue(this.getAdapter({ stateKey, raw: true, initiator, processChanges }), metaKey, newValue);
+        const response = await formActions.setFieldMetaValueAction.handle(new Request({ body: { field: this.getAdapter({ stateKey, raw: true }), metaKey, newValue } }));
+        return response.body.changedNames;
     }
 
-    processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
-        return this.changeSet.processChanges(this, type, dryRun);
+    async processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Promise<Set<string>> {
+        return await this.changeSet.processChanges(this, type, dryRun);
     }
 }
 
@@ -876,24 +718,52 @@ export class FormFieldArray {
         });
     }
 
-    getValue({ stateKey = null, disabledIsNull = true, raw = false }: FormFieldContext = {}): any {
-        return this.fieldArray.map(field => field.getValue({ stateKey, disabledIsNull, raw })).find(value => value != null);
+    async getValue({ stateKey = null, disabledIsNull = true, raw = false }: FormFieldContext = {}): Promise<any> {
+        for (const field of this.fieldArray) {
+            const value = await field.getValue({ stateKey, disabledIsNull, raw });
+            if (value == null) continue;
+            return value;
+        }
+        return null;
     }
 
-    getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): any {
-        return this.fieldArray.map(field => field.getMetaValue(metaKey, { stateKey, raw })).find(value => value != null);
+    async getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): Promise<any> {
+        for (const field of this.fieldArray) {
+            const value = await field.getMetaValue(metaKey, { stateKey, raw });
+            if (value == null) continue;
+            return value;
+        }
+        return null;
     }
 
-    setValue(value: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
-        return this.fieldArray.map(field => field.setValue(value, { stateKey, initiator, processChanges, raw })).find(changedNames => changedNames.size !== 0) ?? new Set();
+    async setValue(value: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Promise<Set<string>> {
+        let result;
+        for (const field of this.fieldArray) {
+            const changedNames = await field.setValue(value, { stateKey, initiator, processChanges, raw });
+            if (changedNames.size === 0) continue;
+            if (result == null) result = changedNames;
+        }
+        return result ?? new Set();
     }
 
-    setMetaValue(metaKey: string, value: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
-        return this.fieldArray.map(field => field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges, raw })).find(changedNames => changedNames.size !== 0) ?? new Set();
+    async setMetaValue(metaKey: string, value: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Promise<Set<string>> {
+        let result;
+        for (const field of this.fieldArray) {
+            const changedNames = await field.setMetaValue(metaKey, value, { stateKey, initiator, processChanges, raw });
+            if (changedNames.size === 0) continue;
+            if (result == null) result = changedNames;
+        }
+        return result ?? new Set();
     }
 
-    processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
-        return this.fieldArray.map(field => field.processChanges(type, dryRun)).find(changedNames => changedNames.size !== 0) ?? new Set();
+    async processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Promise<Set<string>> {
+        let result;
+        for (const field of this.fieldArray) {
+            const changedNames = await field.processChanges(type, dryRun);
+            if (changedNames.size === 0) continue;
+            if (result == null) result = changedNames;
+        }
+        return result ?? new Set();
     }
 }
 
@@ -906,8 +776,8 @@ export abstract class FormFieldLinker {
         this.type = field.type;
     }
 
-    abstract link(): void;
-    abstract unlink(): void;
+    abstract link(): Promise<void>;
+    abstract unlink(): Promise<void>;
 }
 
 export class FormFieldElementLinker extends FormFieldLinker {
@@ -942,15 +812,15 @@ export class FormFieldElementLinker extends FormFieldLinker {
         });
     }
 
-    override link(): void {
-        this.field.setInitialValue(this._getElementValue());
-        this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"));
-        this.field.setInitialMetaValue("visible", true);
-        this.field.setInitialMetaValue("container", this.element.parentElement);
-        if (["radio", "checkbox"].includes(this.type.asElementType())) {
-            this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
-        }
-        this.field.reset({ processChanges: true, initiator: this });
+    override async link(): Promise<void> {
+        // this.field.setInitialValue(this._getElementValue());
+        // this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"));
+        // this.field.setInitialMetaValue("visible", true);
+        // this.field.setInitialMetaValue("container", this.element.parentElement);
+        // if (["radio", "checkbox"].includes(this.type.asElementType())) {
+        //     this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
+        // }
+        await this.field.reset({ processChanges: true, initiator: this });
 
         this.field.addEventListener("changes", this._fieldChangesEventListener);
         if (["text", "number", "textarea"].includes(this.type.asElementType())) {
@@ -965,7 +835,7 @@ export class FormFieldElementLinker extends FormFieldLinker {
         });
     }
 
-    override unlink(): void {
+    override async unlink(): Promise<void> {
         this.field.removeEventListener("changes", this._fieldChangesEventListener);
         if (["text", "number", "textarea"].includes(this.type.asElementType())) {
             this.element.removeEventListener("input", this._elementValueInputEventListener);
@@ -1001,90 +871,65 @@ export class FormFieldElementLinker extends FormFieldLinker {
         }
     }
 
-    _syncElementValue(): void {
+    async _initializeFieldState(): Promise<void> {
+        console.log("[FormFieldElementLinker._syncElementValue] Initialize field initial state");
+        const response = await formActions..handle(new Request({ body: { element: this.element, field: this.field } }));
+    }
+
+    async _syncElementValue(): Promise<void> {
         console.log("[FormFieldElementLinker._syncElementValue] Syncing element value");
-        const value = this.field.getValue({ raw: true });
-        const status = this.type.setElementValue(this.element, value);
-        if (status !== FormFieldTypeElementStatus.VALUE_SET_SUCCESS) {
-            console.log("[FormFieldElementLinker._syncElementMetaValue] Failed to set element value, status `%s`", status);
-            return;
-        }
+        const response = await formActions.syncElementValueFromFieldAction.handle(new Request({ body: { element: this.element, field: this.field } }));
     }
 
-    _getElementValue(): any {
-        const [value, status] = this.type.getElementValue(this.element);
-        if (status !== FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED) {
-            console.warn("[FormFieldElementLinker._getElementValue] Failed to get value from element, status `%s`", status);
-        }
-        return value;
-    }
-
-    _syncFieldValue(): void {
+    async _syncFieldValue(): Promise<void> {
         console.log("[FormFieldElementLinker._syncFieldValue] Syncing field value");
-        this.field.setValue(this._getElementValue(), { initiator: this, processChanges: true, raw: true });
+        const response = await formActions.syncFieldValueFromElementAction.handle(new Request({ body: { element: this.element, field: this.field.getAdapter({ initiator: this, processChanges: true, raw: true }) } }));
     }
 
-    _syncElementMetaValue(metaKey: string): void {
+    async _syncElementMetaValue(metaKey: string): Promise<void> {
         console.log("[FormFieldElementLinker._syncElementMetaValue] Syncing element meta value");
-        const value = this.field.getMetaValue(metaKey, { raw: true });
-        const status = this.type.setElementMetaValue(this.element, metaKey, value);
-        if (status === FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS) {
-            return;
-        }
-        if (status === FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
-            switch (metaKey) {
-                case "visible":
-                    const container = this.field.getMetaValue("container") as HTMLElement;
-                    if (this._handleHideContainer != null) {
-                        container.removeEventListener("transitionend", this._handleHideContainer);
-                        this._handleHideContainer = null;
-                    }
-                    if (value) {
-                        if (container.style.display === "none") {
-                            container.style.display = "";
-                            requestAnimationFrame(() => {
-                                container.dataset.visible = "true";
-                            });
-                        } else {
-                            container.dataset.visible = "true";
-                        }
-                    } else {
-                        if (container.style.display !== "none") {
-                            this._handleHideContainer = (event: Event) => {
-                                container.style.display = "none";
-                            };
-                            container.addEventListener("transitionend", this._handleHideContainer, { once: true });
-                        }
-                        container.dataset.visible = "false";
-                    }
-                    break;
-                case "autofill":
-                    this.element.classList.toggle("autofill", !!value);
-                    break;
-                case "optionsInitialized":
-                    // console.log("options initialized", !!value);
-                    if (value) {
-                        this._syncElementValue();
-                    }
-                    break;
-            }
-            return;
-        }
-
-        console.log("[FormFieldElementLinker._syncElementMetaValue] Failed to set element meta value, status `%s`", status);
+        const response = await formActions.syncElementMetaValueFromFieldAction.handle(new Request({ body: { element: this.element, field: this.field, metaKey } }));
+        // switch (metaKey) {
+        //     case "visible":
+        //         const container = this.field.getMetaValue("container") as HTMLElement;
+        //         if (this._handleHideContainer != null) {
+        //             container.removeEventListener("transitionend", this._handleHideContainer);
+        //             this._handleHideContainer = null;
+        //         }
+        //         if (value) {
+        //             if (container.style.display === "none") {
+        //                 container.style.display = "";
+        //                 requestAnimationFrame(() => {
+        //                     container.dataset.visible = "true";
+        //                 });
+        //             } else {
+        //                 container.dataset.visible = "true";
+        //             }
+        //         } else {
+        //             if (container.style.display !== "none") {
+        //                 this._handleHideContainer = (event: Event) => {
+        //                     container.style.display = "none";
+        //                 };
+        //                 container.addEventListener("transitionend", this._handleHideContainer, { once: true });
+        //             }
+        //             container.dataset.visible = "false";
+        //         }
+        //         break;
+        //     case "autofill":
+        //         this.element.classList.toggle("autofill", !!value);
+        //         break;
+        //     case "optionsInitialized":
+        //         // console.log("options initialized", !!value);
+        //         if (value) {
+        //             this._syncElementValue();
+        //         }
+        //         break;
+        // }
     }
 
-    _getElementMetaValue(metaKey: string): any {
-        const [value, status] = this.type.getElementMetaValue(this.element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED) {
-            console.warn("[FormFieldElementLinker._getElementMetaValue] Failed to get value from element, status `%s`", status);
-        }
-        return value;
-    }
-
-    _syncFieldMetaValue(metaKey: string): void {
+    async _syncFieldMetaValue(metaKey: string): Promise<void> {
         console.log("[FormFieldElementLinker._syncFieldMeta] Syncing field meta value");
-        this.field.setMetaValue(metaKey, this._getElementMetaValue(metaKey), { initiator: this, processChanges: true });
+        const response = await formActions.syncFieldMetaValueFromElementAction.handle(new Request({ body: { element: this.element, field: this.field.getAdapter({ initiator: this, processChanges: true, raw: true }) } }));
     }
 }
 
@@ -1202,7 +1047,7 @@ export class Form extends EventTarget {
             this.fields.addEventListener("changes", this._handleChanges);
             this.registerChangesManager(new FormChangesForRadioManager());
             this.registerChangesManager(new FormChangesForTriggerEffectsManager());
-            this.registerElements();
+            await this.registerElements();
         }
     }
 
@@ -1217,15 +1062,15 @@ export class Form extends EventTarget {
         this._changesManagers.push(changesManager);
     }
 
-    getFormData(): Record<string, any> {
+    async getFormData(): Promise<Record<string, any>> {
         const formData: Record<string, any> = {};
         for (const fieldName of this.fields) {
-            formData[fieldName] = this.fields.get(fieldName).getValue();
+            formData[fieldName] = await this.fields.get(fieldName).getValue();
         }
         return formData;
     }
 
-    registerElements(): void {
+    async registerElements(): Promise<void> {
         for (const element of this.form.elements) {
             if (!FormFieldType.isFormElement(element)) {
                 continue;
@@ -1253,11 +1098,11 @@ export class Form extends EventTarget {
         }
     }
 
-    reset(): void {
+    async reset(): Promise<void> {
         for (const field of this.fields.list) {
-            field.reset({ initiator: this });
+            await field.reset({ initiator: this });
         }
-        this.effectManager.triggerEffects();
+        await this.effectManager.triggerEffects();
     }
 
     addDisableWhenEffect(fieldName: string, disableWhen: () => Promise<boolean> | boolean, dependsOn: string[]): void {
@@ -1269,7 +1114,7 @@ export class Form extends EventTarget {
                     const disabled = await disableWhen();
                     // console.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                    return field.setMetaValue("disabled", disabled, { processChanges: true });
+                    return await field.setMetaValue("disabled", disabled, { processChanges: true });
                 },
             },
             dependsOn
@@ -1286,7 +1131,7 @@ export class Form extends EventTarget {
                     const visible = await visibleWhen();
                     // console.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                    return field.setMetaValue("visible", visible, { processChanges: true });
+                    return await field.setMetaValue("visible", visible, { processChanges: true });
                 },
             },
             dependsOn: [getMetaDependencyKey(fieldName, "disabled")]
@@ -1303,7 +1148,7 @@ export class Form extends EventTarget {
                     const value = await compute();
                     // console.log(`[Effect.ComputedField] Field ${fieldName} value: `, value);
                     const field = this.fields.get(fieldName);
-                    return field.setValue(value, { initiator: this, processChanges: true });
+                    return await field.setValue(value, { initiator: this, processChanges: true });
                 },
             },
             dependsOn
@@ -1318,15 +1163,15 @@ export class Form extends EventTarget {
                 type: "field-autofill",
                 callback: async () => {
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                    const dirty = field.getMetaValue("dirty");
+                    const dirty = await field.getMetaValue("dirty");
                     field.setMetaValue("autofill", !dirty);
                     if (dirty) {
-                        return field.processChanges();
+                        return await field.processChanges();
                     }
                     const value = await autofillWith();
                     // console.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
-                    field.setMetaValue("autofill", field.setValue(value).size !== 0);
-                    return field.processChanges();
+                    await field.setMetaValue("autofill", (await field.setValue(value)).size !== 0);
+                    return await field.processChanges();
                 },
             },
             dependsOn: [getMetaDependencyKey(fieldName, "dirty"), ...dependsOn]
@@ -1343,8 +1188,8 @@ export class Form extends EventTarget {
                     const options = await getOptions();
                     const selectElement = this.getElement(fieldName) as HTMLSelectElement;
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                    const selectedValue = field.getValue({ disabledIsNull: false });
-                    field.setValue(defaultOption.value);
+                    const selectedValue = await field.getValue({ disabledIsNull: false });
+                    await field.setValue(defaultOption.value);
                     selectElement.innerHTML = "";
                     for (const option of [defaultOption, ...options]) {
                         const optionElement = document.createElement("option");
@@ -1352,10 +1197,10 @@ export class Form extends EventTarget {
                         optionElement.textContent = option.textContent;
                         selectElement.options.add(optionElement);
                     }
-                    field.setValue(selectedValue);
-                    field.setMetaValue("disabled", options.length === 0);
-                    field.setMetaValue("optionsInitialized", options.length !== 0);
-                    return field.processChanges();
+                    await field.setValue(selectedValue);
+                    await field.setMetaValue("disabled", options.length === 0);
+                    await field.setMetaValue("optionsInitialized", options.length !== 0);
+                    return await field.processChanges();
                 },
             },
             dependsOn
