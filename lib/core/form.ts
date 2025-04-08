@@ -661,7 +661,7 @@ export class FormField extends EventTarget {
             initiator ??= this;
             stateKey ??= this._currentStateKey;
             await this.initializeState({ stateKey, initiator });
-            const oldValue = await this.getMetaValue(metaKey, { stateKey });
+            const oldValue = await this.getMetaValue(metaKey, { stateKey, raw: true });
             if (oldValue === newValue) return new Set();
             this._metaMap.get(stateKey)!.set(metaKey, newValue);
             const change: FormFieldChange = {
@@ -678,7 +678,7 @@ export class FormField extends EventTarget {
             };
             this.changeSet.add(change);
             console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
-            return await this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
+            return this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
         }
         const response = await formActions.setFieldMetaValueAction.handle(new Request({ body: { field: this.getAdapter({ stateKey, raw: true }), metaKey, newValue } }));
         return response.body.changedNames;

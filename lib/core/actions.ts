@@ -195,7 +195,7 @@ export class Status {
         return instance;
     }
 
-    static create(code: number, tags: ReadonlySet<string>, description: string): Status {
+    static create(code: number, tags: Iterable<string>, description: string): Status {
         const instance = new Status(code, tags, description)
         this.instances.push(instance);
         return instance;
@@ -221,41 +221,158 @@ export class Status {
         this.NotImplemented = this.create(4, new Set(["error"]), "NotImplemented");
     }
 
-    protected constructor(public readonly code: number, public readonly tags: ReadonlySet<string>, public readonly description: string) { }
-}
-
-
-export class Input {
-    constructor (data: any) {
-
+    public readonly tags: ReadonlySet<string>;
+    protected constructor(public readonly code: number, tags: Iterable<string>, public readonly description: string) {
+        this.tags = new Set(tags);
     }
 }
 
-export class Output {
-    constructor (result: any) {
 
-    }
+export class Input<Data = any> {
+    constructor(public data: Data, public context: Context) { }
 }
 
-class Action {
-    constructor (handler: (input: Input) => Output) {
-
-    }
+export class Result<Value = any> {
+    constructor(public input: Input, public value: Value, public status: Status) { }
 }
 
+/**
+ * root -> GetFieldValue
+ * radio-type -> GetFieldValue
+ * 
+ */
+
+export type Handler = (this: ContextRegistry, input: Input, getResult?: () => Promise<Result | Result[]>) => Promise<Result>;
+
+export class ActionError extends Error {
+
+}
+
+export function isActionError(error: unknown): error is ActionError {
+    return error instanceof ActionError;
+}
+
+export interface Context {
+    scope: string;
+    actionScope?: Map<string, string>;
+}
+
+export type UnpackResult<InputData, DependsOn> = DependsOn extends [infer A, ...infer Rest] ? A extends Action<InputData, infer DependencyResultValue, any> ? [Result<DependencyResultValue>, ...UnpackResult<InputData, Rest>] : [] : [];
+
+export type ActionHandler<InputData, ResultValue, DependsOn> =
+    DependsOn extends [...infer Rest]
+    ? (input: Input<InputData>, getResults: () => Promise<UnpackResult<InputData, Rest>>) => Promise<Result<ResultValue>>
+    : DependsOn extends Action<InputData, infer DependencyResultValue, any>
+    ? (input: Input<InputData>, getResult: () => Promise<Result<DependencyResultValue>>) => Promise<Result<ResultValue>>
+    : (input: Input<InputData>) => Promise<Result<ResultValue>>;
+
+
+class Action<InputData = any, ResultValue = any, DependsOn = any> {
+    constructor(
+        public readonly scope: string,
+        public readonly name: string,
+        public readonly handler: ActionHandler<InputData, ResultValue, DependsOn>,
+        public readonly dependsOn: DependsOn
+    ) { }
+}
+
+export function newAction<InputData, ResultValue, DependsOn extends null>(scope: string, name: string, handler: ActionHandler<InputData, ResultValue, DependsOn>, dependsOn?: DependsOn): Action<InputData, ResultValue, DependsOn>;
+export function newAction<InputData, ResultValue, DependsOn extends Action<any, any, any>>(scope: string, name: string, handler: ActionHandler<InputData, ResultValue, DependsOn>, dependsOn?: DependsOn): Action<InputData, ResultValue, DependsOn>;
+export function newAction<InputData, ResultValue, DependsOn extends Action<any, any, any>[]>(scope: string, name: string, handler: ActionHandler<InputData, ResultValue, [...DependsOn]>, dependsOn?: [...DependsOn]): Action<InputData, ResultValue, [...DependsOn]>;
+export function newAction(scope: string, name: string, handler: ActionHandler<any, any, any>, dependsOn: any = null) {
+    return new Action(scope, name, handler, dependsOn);
+}
+
+
+
+const action1 = newAction("1", "1", async (input: Input<string>) => {
+    return new Result<number>(input, 1, Status.Ok);
+}, null);
+
+const action2 = newAction("2", "2", async (input: Input<string>, getResult) => {
+    getResults();
+    return new Result<number>(input, 1, Status.Ok);
+}, action1);
+
+
+export type ValueHandler = (this: ContextRegistry, input: Input) => Promise<any | Result>;
+export type ObjectHandler = (this: ContextRegistry, input: Input) => Promise<{ result: any, status: Status } | Result>;
 
 export class Registry {
-    public actions: Map<string, Action>;
+    static readonly instance = new Registry();
 
-    constructor () {
-        this.actions = new Map();
+    root(): ContextRegistry { return this.with({ scope: "root" }); }
+    with(context: Context): ContextRegistry { return new ContextRegistry(this, context); }
+
+    register<InputData, ResultValue, DependsOn>(action: Action<InputData, ResultValue, DependsOn>, context: Context): Action<InputData, ResultValue, DependsOn> {
+        const existingActionIndex = this._actions.findIndex(action => action.name === name && action.scope === context.scope);
+        if (existingActionIndex !== -1) {
+            this._actions[existingActionIndex] = action;
+        } else {
+            this._actions.push(action);
+        }
+        return action;
     }
 
-    register(key: string, handler: (input: Input) => Output) {
-
+    delete(name: string, context: Context): boolean {
+        const actionIndex = this._actions.findIndex(action => action.name === name && action.scope === context.scope);
+        if (actionIndex !== -1) {
+            this._actions.splice(actionIndex, 1);
+            return true;
+        }
+        return false;
     }
 
-    fetch() {
+    get(name: string, context: Context): Action<any, any, any> {
+        const action = this._actions.find(action => action.name === name && action.scope === context.scope);
+        if (!action) {
+            throw new Error(`No handler for action "${name}" in scope "${context.scope}"`);
+        }
+        return action;
+    }
 
+    async handle(name: string, data: any, context: Context): Promise<Result> {
+        const input = new Input(data, context);
+        const handler = this.get(name, context).handler.bind(this.with(context));
+        return await handler(input);
+    }
+
+    async redirect(name: string, input: Input, context: Context): Promise<Result> {
+        return await this.get(name, context).handler.bind(this.with(context))(input);
+    }
+
+    private _actions: Action<any, any, any>[];
+    private constructor() {
+        this._actions = [];
     }
 }
+
+class ContextRegistry {
+    constructor(public readonly registry: Registry, public readonly context: Context) { }
+
+    register(name: string, handler: ValueHandler | ObjectHandler, { parent = null, handlerType = "value", ...context }: { parent?: Action<any, any> | null, handlerType?: string } & Partial<Context> = {}): Action {
+        return this.registry.register(name, handler, { parent, handlerType, ...this.context, ...context });
+    }
+
+    with(context: Context): ContextRegistry {
+        return new ContextRegistry(this.registry, { ...this.context, ...context });
+    }
+
+    get(name: string, context: Partial<Context> = {}): Action {
+        return this.registry.get(name, { ...this.context, ...context });
+    }
+
+    delete(name: string, context: Partial<Context> = {}): boolean {
+        return this.registry.delete(name, { ...this.context, ...context });
+    }
+
+    handle(name: string, data: any, context: Partial<Context> = {}): Promise<Result> {
+        return this.registry.handle(name, data, { ...this.context, ...context });
+    }
+
+    redirect(name: string, input: Input, context: Partial<Context> = {}): Promise<Result> {
+        return this.registry.redirect(name, input, { ...this.context, ...context });
+    }
+}
+
+export const registry = Registry.instance.root();
