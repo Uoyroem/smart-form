@@ -1189,7 +1189,7 @@ export class Form extends EventTarget {
     async setup() {
         if (this.form != null) {
             this.form.classList.add("uoyroem-form");
-            this.form.noValidate = true;
+            // this.form.noValidate = true;
 
             this.form.addEventListener("submit", (event) => {
                 event.preventDefault();
