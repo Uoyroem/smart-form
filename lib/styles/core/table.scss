@@ -1,0 +1,32 @@
+.ss-table {
+    display: flex;
+    flex-direction: column;
+    background-color: rgb(225, 225, 225);
+
+    &-headers {
+        display: flex;
+    }
+
+    &-header-column {
+        padding: 0.75em 1.5em;
+        flex: 0 0 101px;
+    }
+
+    &-cell {
+        border: 2px solid black;
+
+        & + & {
+            border-left: none;
+        }
+    }
+
+    &-header-columns {
+        display: flex;
+        flex: auto;
+    }
+
+    &-row {
+        display: flex;
+
+    }
+}

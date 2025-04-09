@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Example 1</title>
-    <link rel="stylesheet" href="/dist/smart-form.min.css">
+    <link rel="stylesheet" href="/dist/smart-system.min.css">
 </head>
 
 <body>
+    <div role=""></div>
     <form id="test-form">
         <div style="width: 100px;">
             <input style="display: block; width: 100%;" type="number" name="amount" id="amount-input">
@@ -19,9 +20,28 @@
             </div>
         </div>
     </form>
-    <script src="/dist/smart-form.bundle.min.js"></script>
+    <div id="table-container">
+
+    </div>
+    <script src="/dist/smart-system.bundle.min.js"></script>
     <script>
-        class TestForm extends Uoyroem.Form {
+
+        const table = new SmartSystem.Table({container: document.getElementById("table-container"), columnDefinitions: [
+            {
+                key: "date",
+                title: "Дата"
+            },
+            {
+                key: "account",
+                title: "Расчётный счёт"
+            },
+            {
+                key: "amount",
+                title: "Сумма"
+            },
+        ]});
+
+        class TestForm extends SmartSystem.Form {
             constructor() {
                 super({ form: document.forms["test-form"] });
             }
