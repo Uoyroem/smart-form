@@ -1,5 +1,5 @@
-import * as actions from "./actions";
-
+import { Action, fromRawResult, manager, Scope, Status } from "./actions";
+import * as form from "./form";
 
 // export interface FieldRequest {
 //     field: form.FormField;
@@ -270,27 +270,47 @@ import * as actions from "./actions";
 // async function getElementArrayValue(elements: form.FormElement[]) { }
 // async function getElementArrayMetaValue(elements: form.FormElement[], metaKey: string) { }
 
-actions.Status.create(1000, ["successfull"], "Field is disabled");
-actions.Status.create(1001, ["successfull"], "Field value successfully retrieved");
-actions.Status.create(1002, ["successfull"], "Field is not checked");
+Status.create(1000, ["successfull"], "Field is disabled");
+Status.create(1001, ["successfull"], "Field value successfully retrieved");
+Status.create(1002, ["successfull"], "Field is not checked");
+Status.create(1003, ["successfull"], "Field meta value successfully retrieved");
 
-actions.registry.register("object", "get-field-value", async function (input) {
-    return { result: input.data.field.getValue(), status: 1001 };
-});
+export const getFieldValue = new Action<{ field: form.FormField }, any>("get-field-value");
+manager.registerIndepedentHandler(getFieldValue, fromRawResult(async input => {
+    return { value: await input.data.field.getValue(), status: Status.get(1001) };
+}));
 
-actions.registry.with({ scope: "field-disabled" }).register("get-field-value", async function (input) {
-    const result = await this.redirect("get-field-value", input, { scope: "root" });
-    if (input.data.field.getMetaValue("disabled")) return { result: null, status: 1000 };
-}, {});
+export const getFieldMetaValue = new Action<{ field: form.FormField, metaKey: string }, any>("get-field-meta-value");
+manager.registerIndepedentHandler(getFieldMetaValue, fromRawResult(async input => {
+    return { value: await input.data.field.getMetaValue(input.data.metaKey), status: Status.get(1003) };
+}));
 
-actions.registry.with({ scope: "field-checked" }).register("get-field-value", async function (input) {
-    const result = await this.redirect("get-field-value", input, { scope: "field-disabled" });
-    if (result.status.code !== 1001) return result;
-    if (input.data.field.getMetaValue("checked")) return null;
-    return result.value;
-});
+manager.with({ scope: Scope.get("field-disabled") }).registerDepedentHandler(getFieldValue, fromRawResult(async (input, getResults) => {
+    const [result] = await getResults();
+    if (await input.data.field.getMetaValue("disabled")) {
+        return { value: null, status: Status.get(1000) };
+    }
+    return result;
+}), [{ action: getFieldValue, scope: Scope.get("root") }]);
 
-actions.registry.register("result", "set-field-value", async function (input) {
-    return input.data.field.setValue(input.data.newValue);
-});
+manager.with({ scope: Scope.get("field-checked") })
+// actions.manager.register("object", "get-field-value", async function (input) {
+//     return { result: input.data.field.getValue(), status: 1001 };
+// });
+
+// actions.manager.with({ scope: "field-disabled" }).register("get-field-value", async function (input) {
+//     const result = await this.redirect("get-field-value", input, { scope: "root" });
+//     if (input.data.field.getMetaValue("disabled")) return { result: null, status: 1000 };
+// }, {});
+
+// actions.manager.with({ scope: "field-checked" }).register("get-field-value", async function (input) {
+//     const result = await this.redirect("get-field-value", input, { scope: "field-disabled" });
+//     if (result.status.code !== 1001) return result;
+//     if (input.data.field.getMetaValue("checked")) return null;
+//     return result.value;
+// });
+
+// actions.manager.register("result", "set-field-value", async function (input) {
+//     return input.data.field.setValue(input.data.newValue);
+// });
 

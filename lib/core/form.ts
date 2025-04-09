@@ -123,7 +123,7 @@ export class FormFieldType {
 
     public registrySequence: actions.RegistrySequence;
     constructor(public readonly name: string) {
-        this.registrySequence = actions.Registry.fallback(`type-${name}`, "root");
+        this.registrySequence = actions.Manager.fallback(`type-${name}`, "root");
     }
 
     isEqual(a: any, b: any): boolean { return a === b; }
