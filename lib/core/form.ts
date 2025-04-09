@@ -296,7 +296,7 @@ export class FormFieldTypeRadio extends FormFieldType {
             element.checked = Boolean(newValue);
             return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
-        return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
+        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 }
 
@@ -344,7 +344,7 @@ export class FormFieldTypeCheckbox extends FormFieldType {
             element.checked = Boolean(newValue);
             return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
-        return FormFieldTypeElementStatus.FAILED_TO_SET_META_VALUE;
+        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 }
 
