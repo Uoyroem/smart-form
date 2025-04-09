@@ -3,7 +3,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const commonConfig = {
-  entry: 'main.js',
+  entry: './main.js',
   module: {
     rules: [
       {
@@ -29,7 +29,7 @@ const commonConfig = {
     path: path.resolve(__dirname, 'dist'),
     library: {
       type: 'window',
-      name: 'Uoyroem',
+      name: 'SmartSystem',
     },
   },
 };

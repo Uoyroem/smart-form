@@ -1,3 +1,3 @@
-import "./lib";
 import "./lib/styles";
+export * from "./lib";
 
