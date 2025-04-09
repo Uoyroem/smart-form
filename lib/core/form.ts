@@ -1213,8 +1213,6 @@ export class Form extends EventTarget {
         }
     }
 
-
-
     switchState(stateKey: string) {
         for (const field of this.fields.list) {
             field.switchState({ stateKey, initiator: this, processChanges: true });
