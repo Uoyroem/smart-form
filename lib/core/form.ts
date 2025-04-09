@@ -1189,8 +1189,6 @@ export class Form extends EventTarget {
     async setup() {
         if (this.form != null) {
             this.form.classList.add("ss-form");
-            // this.form.noValidate = true;
-
             this.form.addEventListener("submit", (event) => {
                 event.preventDefault();
                 this.submit().then(() => this.reset());
@@ -1215,6 +1213,15 @@ export class Form extends EventTarget {
         }
     }
 
+
+
+    switchState(stateKey: string) {
+        for (const field of this.fields.list) {
+            field.switchState({ stateKey, initiator: this, processChanges: true });
+        }
+        this.effectManager.triggerEffects();
+    }
+
     registerChangesManager(changesManager: FormChangesManager) {
         this._changesManagers.push(changesManager);
     }
@@ -1225,6 +1232,14 @@ export class Form extends EventTarget {
             formData[fieldName] = this.fields.get(fieldName).getValue();
         }
         return formData;
+    }
+
+    updateFormData(formData: Record<string, any>) {
+        for (const fieldName of this.fields) {
+            if (!(fieldName in formData)) continue;
+            this.fields.get(fieldName).setValue(formData[fieldName], { initiator: this });
+        }
+        this.effectManager.triggerEffects();
     }
 
     registerElements(): void {
@@ -1245,14 +1260,8 @@ export class Form extends EventTarget {
         return this.form.elements.namedItem(name);
     }
 
-    async validate(): Promise<boolean> {
-        return true;
-    }
-
     async submit(): Promise<void> {
-        if (!await this.validate()) {
 
-        }
     }
 
     reset(): void {
