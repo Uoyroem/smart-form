@@ -25,33 +25,9 @@ export function getMetaDependencyKey(fieldName: string, metaKey: string) {
     return `${fieldName}:${metaKey}`;
 }
 
-
-
-export class FormFieldValidator {
-    public name: string;
-
-    constructor(name: string) {
-        this.name = name;
-    }
-
-    validate(field: FormField) {
-
-    }
-}
-
-export class FormFieldValidatorRequired extends FormFieldValidator {
-    constructor() {
-        super("Required");
-    }
-
-    validate(field: FormField): void {
-
-    }
-}
-
 export type FormElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
-export enum FormFieldTypeElementStatus {
+export enum FormTypeElementStatus {
     VALUE_SUCCESSFULLY_RECEIVED = "value-successfully-received",
     VALUE_SET_SUCCESS = "value-set-success",
     META_VALUE_SUCCESSFULLY_RECEIVED = "meta-value-successfully-received",
@@ -63,40 +39,47 @@ export enum FormFieldTypeElementStatus {
     META_KEY_NOT_EXISTS = "meta-key-not-exists"
 }
 
-export class FormFieldType {
+interface FormPrimitiveType { }
+interface FormElementType { }
+
+export class FormType {
     static object() {
-        return new FormFieldTypeObject();
+        return new FormTypeObject();
+    }
+
+    static boolean() {
+        return new FormTypeBoolean();
     }
 
     static text() {
-        return new FormFieldTypeText();
+        return new FormTypeText();
     }
 
     static number() {
-        return new FormFieldTypeNumber();
+        return new FormTypeNumber();
     }
 
     static date() {
-        return new FormFieldTypeDate();
+        return new FormTypeDate();
     }
 
     static select({ multiple = false } = {}) {
-        return new FormFieldTypeSelect().multiple(multiple);
+        return new FormTypeSelect().multiple(multiple);
     }
 
     static checkbox() {
-        return new FormFieldTypeCheckbox();
+        return new FormTypeCheckbox();
     }
 
     static radio() {
-        return new FormFieldTypeRadio();
+        return new FormTypeRadio();
     }
 
     static isFormElement(element: Element): element is FormElement {
         return element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement;
     }
 
-    static fromFormElement(element: FormElement): FormFieldType {
+    static fromFormElement(element: FormElement): FormType {
         switch (element.type) {
             case "select-one":
                 return this.select();
@@ -148,52 +131,52 @@ export class FormFieldType {
         return field.setMetaValue(metaKey, newValue);
     }
 
-    getElementValue(element: Element): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [null, FormFieldTypeElementStatus.INVALID_ELEMENT];
+    getElementValue(element: Element): [any, FormTypeElementStatus] {
+        if (!FormType.isFormElement(element)) {
+            return [null, FormTypeElementStatus.INVALID_ELEMENT];
         }
         if (element.type !== this.asElementType()) {
-            return [null, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            return [null, FormTypeElementStatus.TYPE_MISMATCH];
         }
-        return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        return [element.value, FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
     }
 
-    setElementValue(element: Element, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
+    setElementValue(element: Element, newValue: any): FormTypeElementStatus {
+        if (!FormType.isFormElement(element)) {
+            return FormTypeElementStatus.INVALID_ELEMENT;
         }
         if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            return FormTypeElementStatus.TYPE_MISMATCH;
         }
         element.value = newValue;
-        return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
+        return FormTypeElementStatus.VALUE_SET_SUCCESS;
     }
 
-    getElementMetaValue(element: Element, metaKey: string): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
+    getElementMetaValue(element: Element, metaKey: string): [any, FormTypeElementStatus] {
+        if (!FormType.isFormElement(element)) {
+            return [undefined, FormTypeElementStatus.INVALID_ELEMENT];
         }
         if (element.type !== this.asElementType()) {
-            return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            return [undefined, FormTypeElementStatus.TYPE_MISMATCH];
         }
         if (metaKey === "disabled") {
-            return [element.disabled, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            return [element.disabled, FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS]
+        return [undefined, FormTypeElementStatus.META_KEY_NOT_EXISTS]
     }
 
-    setElementMetaValue(element: Element, metaKey: string, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
+    setElementMetaValue(element: Element, metaKey: string, newValue: any): FormTypeElementStatus {
+        if (!FormType.isFormElement(element)) {
+            return FormTypeElementStatus.INVALID_ELEMENT;
         }
         if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            return FormTypeElementStatus.TYPE_MISMATCH;
         }
         if (metaKey === "disabled") {
             element.disabled = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
-        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
+        return FormTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 
     getInitialValue(): any {
@@ -207,12 +190,12 @@ export class FormFieldType {
         return meta;
     }
 
-    isSameType(otherType: FormFieldType): boolean {
+    isSameType(otherType: FormType): boolean {
         return this.name === otherType.name;
     }
 }
 
-export class FormFieldTypeText extends FormFieldType {
+export class FormTypeText extends FormType implements FormPrimitiveType, FormElementType {
     private _area: boolean;
 
     constructor() {
@@ -230,8 +213,7 @@ export class FormFieldTypeText extends FormFieldType {
     }
 }
 
-export class FormFieldTypeNumber extends FormFieldType {
-    private _precision: number = 2;
+export class FormTypeNumber extends FormType implements FormPrimitiveType, FormElementType {
     constructor() {
         super("Number");
     }
@@ -241,7 +223,7 @@ export class FormFieldTypeNumber extends FormFieldType {
     }
 }
 
-export class FormFieldTypeDate extends FormFieldType {
+export class FormTypeDate extends FormType implements FormPrimitiveType, FormElementType {
     constructor() {
         super("Date");
     }
@@ -255,7 +237,13 @@ export class FormFieldTypeDate extends FormFieldType {
     }
 }
 
-export class FormFieldTypeRadio extends FormFieldType {
+export class FormTypeBoolean extends FormType implements FormPrimitiveType, FormElementType {
+    constructor() {
+        super("Boolean");
+    }
+}
+
+export class FormTypeRadio extends FormType implements FormElementType {
     constructor() {
         super("Radio");
     }
@@ -278,29 +266,29 @@ export class FormFieldTypeRadio extends FormFieldType {
         return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
     }
 
-    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
+    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormTypeElementStatus] {
         const [value, status] = super.getElementMetaValue(element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) {
             return [value, status];
         }
         if (metaKey === "checked") {
-            return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            return [element.checked, FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
+        return [undefined, FormTypeElementStatus.META_KEY_NOT_EXISTS];
     }
 
-    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
+    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormTypeElementStatus {
         const status = super.setElementMetaValue(element, metaKey, newValue);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) return status;
         if (metaKey === "checked") {
             element.checked = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
-        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
+        return FormTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 }
 
-export class FormFieldTypeCheckbox extends FormFieldType {
+export class FormTypeCheckbox extends FormType implements FormElementType {
     constructor() {
         super("Checkbox");
     }
@@ -326,39 +314,39 @@ export class FormFieldTypeCheckbox extends FormFieldType {
         return field.setMetaValue("checked", newValue != null && field.getValue() === newValue);
     }
 
-    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormFieldTypeElementStatus] {
+    override getElementMetaValue(element: HTMLInputElement, metaKey: string): [any, FormTypeElementStatus] {
         const [value, status] = super.getElementMetaValue(element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) {
             return [value, status];
         }
         if (metaKey === "checked") {
-            return [element.checked, FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            return [element.checked, FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [undefined, FormFieldTypeElementStatus.META_KEY_NOT_EXISTS];
+        return [undefined, FormTypeElementStatus.META_KEY_NOT_EXISTS];
     }
 
-    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormFieldTypeElementStatus {
+    override setElementMetaValue(element: HTMLInputElement, metaKey: string, newValue: any): FormTypeElementStatus {
         const status = super.setElementMetaValue(element, metaKey, newValue);
-        if (status !== FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) return status;
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) return status;
         if (metaKey === "checked") {
             element.checked = Boolean(newValue);
-            return FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS;
+            return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
-        return FormFieldTypeElementStatus.META_KEY_NOT_EXISTS;
+        return FormTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 }
 
-export class FormFieldTypeSelect extends FormFieldType {
+export class FormTypeSelect extends FormType implements FormElementType {
     private _multiple: boolean;
-    private _of: FormFieldType;
+    private _of: FormType;
 
     constructor() {
         super("select");
         this._multiple = false;
         /**
-         * @type {FormFieldType}
+         * @type {FormType}
          */
-        this._of = FormFieldType.text();
+        this._of = FormType.text();
     }
 
     asElementType(): string {
@@ -376,30 +364,30 @@ export class FormFieldTypeSelect extends FormFieldType {
         return this;
     }
 
-    of(type: FormFieldType): this {
+    of(type: FormType): this {
         this._of = type;
         return this;
     }
 
-    override getElementValue(element: HTMLSelectElement): [any, FormFieldTypeElementStatus] {
-        if (!FormFieldType.isFormElement(element)) {
-            return [undefined, FormFieldTypeElementStatus.INVALID_ELEMENT];
+    override getElementValue(element: HTMLSelectElement): [any, FormTypeElementStatus] {
+        if (!FormType.isFormElement(element)) {
+            return [undefined, FormTypeElementStatus.INVALID_ELEMENT];
         }
         if (element.type !== this.asElementType()) {
-            return [undefined, FormFieldTypeElementStatus.TYPE_MISMATCH];
+            return [undefined, FormTypeElementStatus.TYPE_MISMATCH];
         }
         if (this._multiple) {
-            return [Array.from(element.selectedOptions, option => option.value), FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+            return [Array.from(element.selectedOptions, option => option.value), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [element.value, FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        return [element.value, FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
     }
 
-    override setElementValue(element: HTMLSelectElement, newValue: any): FormFieldTypeElementStatus {
-        if (!FormFieldType.isFormElement(element)) {
-            return FormFieldTypeElementStatus.INVALID_ELEMENT;
+    override setElementValue(element: HTMLSelectElement, newValue: any): FormTypeElementStatus {
+        if (!FormType.isFormElement(element)) {
+            return FormTypeElementStatus.INVALID_ELEMENT;
         }
         if (element.type !== this.asElementType()) {
-            return FormFieldTypeElementStatus.TYPE_MISMATCH;
+            return FormTypeElementStatus.TYPE_MISMATCH;
         }
         let options: (HTMLOptionElement | null)[];
         if (this._multiple) {
@@ -411,15 +399,15 @@ export class FormFieldTypeSelect extends FormFieldType {
                 element.querySelector(`option[value="${newValue}"]`)
             ]
         }
-        if (options.some(option => option == null)) return FormFieldTypeElementStatus.FAILED_TO_SET_VALUE;
+        if (options.some(option => option == null)) return FormTypeElementStatus.FAILED_TO_SET_VALUE;
         (options as HTMLOptionElement[]).forEach(option => {
             option.selected = true;
         });
-        return FormFieldTypeElementStatus.VALUE_SET_SUCCESS;
+        return FormTypeElementStatus.VALUE_SET_SUCCESS;
     }
 }
 
-export class FormFieldTypeObject extends FormFieldType {
+export class FormTypeObject extends FormType implements FormPrimitiveType {
     constructor() {
         super("Object");
     }
@@ -596,7 +584,7 @@ export interface FormFieldContext {
 
 export class FormField extends EventTarget {
     private _name: string;
-    private _type: FormFieldType;
+    private _type: FormType;
     private _changeSet: FormFieldChangeSet;
     private _initializedStateKeys: Set<string>;
     private _initialValue: any;
@@ -605,7 +593,7 @@ export class FormField extends EventTarget {
     private _metaMap: Map<string, Map<string, any>>;
     private _currentStateKey: string;
 
-    constructor(name: string, type: FormFieldType, { changeSet = null, effectManager = null }: { changeSet?: FormFieldChangeSet | null, effectManager?: EffectManager | null } = {}) {
+    constructor(name: string, type: FormType, { changeSet = null, effectManager = null }: { changeSet?: FormFieldChangeSet | null, effectManager?: EffectManager | null } = {}) {
         super();
         this._name = name;
         this._type = type;
@@ -651,7 +639,7 @@ export class FormField extends EventTarget {
         return this._name;
     }
 
-    get type(): FormFieldType {
+    get type(): FormType {
         return this._type;
     }
 
@@ -663,9 +651,9 @@ export class FormField extends EventTarget {
         stateKey ??= this._currentStateKey;
         console.log("[FormField.reset] Reset state `%s` for field `%s`", stateKey, this.name);
         this.setValue(this._initialValue, { raw: true, stateKey, initiator });
-        for (const [metaKey, value] of this._initialMeta.entries()) {
-            this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
-        }
+        // for (const [metaKey, value] of this._initialMeta.entries()) {
+        //     this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
+        // }
         return this.processChanges(null, !processChanges);
     }
 
@@ -673,9 +661,12 @@ export class FormField extends EventTarget {
         if (!this._initializedStateKeys.has(stateKey)) {
             console.log("[FormField.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
             this._initializedStateKeys.add(stateKey);
-            this._valueMap.set(stateKey, null);
+            this.setValue(this._initialValue, { raw: true, stateKey, initiator });
             this._metaMap.set(stateKey, new Map());
-            this.reset({ stateKey, initiator, processChanges: true });
+            for (const [metaKey, value] of this._initialMeta.entries()) {
+                this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
+            }
+            this.processChanges(null);
         }
     }
 
@@ -762,15 +753,16 @@ export class FormField extends EventTarget {
     }
 
     getValue({ stateKey = null, raw = false, disabledIsNull = true }: FormFieldContext = {}): any {
-        if (raw) {
-            stateKey ??= this._currentStateKey
-            this.initializeState({ stateKey });
-            return this._valueMap.get(stateKey);
+        if (!raw) {
+            if (disabledIsNull && this.getMetaValue("disabled", { stateKey })) {
+                return null;
+            }
+            return this.type.getFieldValue(this.getAdapter({ stateKey, raw: true }));
         }
-        if (disabledIsNull && this.getMetaValue("disabled", { stateKey })) {
-            return null;
-        }
-        return this.type.getFieldValue(this.getAdapter({ stateKey, raw: true }));
+
+        stateKey ??= this._currentStateKey
+        this.initializeState({ stateKey });
+        return this._valueMap.get(stateKey);
     }
 
     setInitialValue(newValue: any): void {
@@ -778,39 +770,39 @@ export class FormField extends EventTarget {
     }
 
     setValue(newValue: any, { stateKey = null, raw = false, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
-        if (raw) {
-            initiator ??= this;
-            stateKey ??= this._currentStateKey;
-            this.initializeState({ stateKey, initiator });
-            const oldValue = this.getValue({ stateKey, raw: true });
-            if (this.type.isEqual(oldValue, newValue)) return new Set();
-            this._valueMap.set(stateKey, newValue);
-            const change: FormFieldChange = {
-                stateKey,
-                type: FormFieldChangeType.Value,
-                field: this,
-                initiator,
-                oldValue,
-                newValue,
-                date: new Date(),
-                last: true,
-                processed: false
-            };
-            console.log("[FormField.setValue] Value changed:", { oldValue, newValue, stateKey });
-            this.changeSet.add(change);
-            return this.processChanges(FormFieldChangeType.Value, !processChanges);
+        if (!raw) {
+            return this.type.setFieldValue(this.getAdapter({ stateKey, raw: true, processChanges, initiator }), newValue);
         }
-        return this.type.setFieldValue(this.getAdapter({ stateKey, raw: true, processChanges, initiator }), newValue);
+        initiator ??= this;
+        stateKey ??= this._currentStateKey;
+        this.initializeState({ stateKey, initiator });
+        const oldValue = this.getValue({ stateKey, raw: true });
+        if (this.type.isEqual(oldValue, newValue)) return new Set();
+        this._valueMap.set(stateKey, newValue);
+        const change: FormFieldChange = {
+            stateKey,
+            type: FormFieldChangeType.Value,
+            field: this,
+            initiator,
+            oldValue,
+            newValue,
+            date: new Date(),
+            last: true,
+            processed: false
+        };
+        console.log("[FormField.setValue] Value changed:", { oldValue, newValue, stateKey });
+        this.changeSet.add(change);
+        return this.processChanges(FormFieldChangeType.Value, !processChanges);
     }
 
     getMetaValue(metaKey: string, { stateKey = null, raw = false }: FormFieldContext = {}): any {
-        if (raw) {
-            stateKey ??= this._currentStateKey
-            this.initializeState({ stateKey });
-            const meta = this._metaMap.get(stateKey);
-            return meta!.get(metaKey);
+        if (!raw) {
+            return this.type.getFieldMetaValue(this.getAdapter({ raw: true, stateKey }), metaKey);
         }
-        return this.type.getFieldMetaValue(this.getAdapter({ raw: true, stateKey }), metaKey);
+        stateKey ??= this._currentStateKey
+        this.initializeState({ stateKey });
+        const meta = this._metaMap.get(stateKey);
+        return meta!.get(metaKey);
     }
 
     setInitialMetaValue(metaKey: string, newValue: any): void {
@@ -818,35 +810,39 @@ export class FormField extends EventTarget {
     }
 
     setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
-        if (raw) {
-            initiator ??= this;
-            stateKey ??= this._currentStateKey;
-            this.initializeState({ stateKey, initiator });
-            const oldValue = this.getMetaValue(metaKey, { stateKey });
-            if (oldValue === newValue) return new Set();
-            this._metaMap.get(stateKey)!.set(metaKey, newValue);
-            const change: FormFieldChange = {
-                stateKey,
-                type: FormFieldChangeType.MetaValue,
-                field: this,
-                initiator,
-                metaKey,
-                oldValue,
-                newValue,
-                date: new Date(),
-                last: true,
-                processed: false
-            };
-            this.changeSet.add(change);
-            console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
-            return this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
+        if (!raw) {
+            return this.type.setFieldMetaValue(this.getAdapter({ stateKey, raw: true, initiator, processChanges }), metaKey, newValue);
         }
-        return this.type.setFieldMetaValue(this.getAdapter({ stateKey, raw: true, initiator, processChanges }), metaKey, newValue);
+        initiator ??= this;
+        stateKey ??= this._currentStateKey;
+        this.initializeState({ stateKey, initiator });
+        const oldValue = this.getMetaValue(metaKey, { stateKey });
+        if (oldValue === newValue) return new Set();
+        this._metaMap.get(stateKey)!.set(metaKey, newValue);
+        const change: FormFieldChange = {
+            stateKey,
+            type: FormFieldChangeType.MetaValue,
+            field: this,
+            initiator,
+            metaKey,
+            oldValue,
+            newValue,
+            date: new Date(),
+            last: true,
+            processed: false
+        };
+        this.changeSet.add(change);
+        console.log("[FormField.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
+        return this.processChanges(FormFieldChangeType.MetaValue, !processChanges);
     }
 
     processChanges(type: FormFieldChangeType | null = null, dryRun: boolean = false): Set<string> {
         return this.changeSet.processChanges(this, type, dryRun);
     }
+}
+
+export class ContextFormField {
+    constructor(public readonly field: FormField, public readonly context: FormFieldContext) { }
 }
 
 export class FormFieldArray {
@@ -901,7 +897,7 @@ export class FormFieldArray {
 
 export abstract class FormFieldLinker {
     public field: FormField;
-    public type: FormFieldType;
+    public type: FormType;
 
     constructor(field: FormField) {
         this.field = field;
@@ -914,7 +910,6 @@ export abstract class FormFieldLinker {
 
 export class FormFieldElementLinker extends FormFieldLinker {
     public element: FormElement;
-    private _mutationObserver: MutationObserver;
     private _handleHideContainer: ((event: Event) => void) | null;
     /**
      * 
@@ -931,26 +926,14 @@ export class FormFieldElementLinker extends FormFieldLinker {
         this._elementValueInputEventListener = this._elementValueInputEventListener.bind(this);
         this._elementValueChangeEventListener = this._elementValueChangeEventListener.bind(this);
         this._handleHideContainer = null;
-        this._mutationObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === "attributes") {
-                    switch (mutation.attributeName) {
-                        case "disabled":
-                            this._syncFieldMetaValue("disabled");
-                            break;
-                    }
-                }
-            }
-        });
     }
 
     override link(): void {
         this.field.setInitialValue(this._getElementValue());
-        this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"));
-        this.field.setInitialMetaValue("visible", true);
-        this.field.setInitialMetaValue("container", this.element.parentElement);
+        this.field.setInitialMetaValue("disabled", [this._getElementMetaValue("disabled"), false]);
+        this.field.setInitialMetaValue("container", [this.element.parentElement, false]);
         if (["radio", "checkbox"].includes(this.type.asElementType())) {
-            this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
+            this.field.setInitialMetaValue("checked", [this._getElementMetaValue("checked"), true]);
         }
         this.field.reset({ processChanges: true, initiator: this });
 
@@ -960,11 +943,6 @@ export class FormFieldElementLinker extends FormFieldLinker {
         } else {
             this.element.addEventListener("change", this._elementValueChangeEventListener);
         }
-
-        this._mutationObserver.observe(this.element, {
-            attributes: true,
-            attributeFilter: ["disabled"]
-        });
     }
 
     override unlink(): void {
@@ -974,7 +952,6 @@ export class FormFieldElementLinker extends FormFieldLinker {
         } else {
             this.element.removeEventListener("change", this._elementValueChangeEventListener);
         }
-        this._mutationObserver.disconnect();
     }
 
     _elementValueInputEventListener(event: Event): void {
@@ -1007,7 +984,7 @@ export class FormFieldElementLinker extends FormFieldLinker {
         console.log("[FormFieldElementLinker._syncElementValue] Syncing element value");
         const value = this.field.getValue({ raw: true });
         const status = this.type.setElementValue(this.element, value);
-        if (status !== FormFieldTypeElementStatus.VALUE_SET_SUCCESS) {
+        if (status !== FormTypeElementStatus.VALUE_SET_SUCCESS) {
             console.log("[FormFieldElementLinker._syncElementMetaValue] Failed to set element value, status `%s`", status);
             return;
         }
@@ -1015,7 +992,7 @@ export class FormFieldElementLinker extends FormFieldLinker {
 
     _getElementValue(): any {
         const [value, status] = this.type.getElementValue(this.element);
-        if (status !== FormFieldTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED) {
+        if (status !== FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED) {
             console.warn("[FormFieldElementLinker._getElementValue] Failed to get value from element, status `%s`", status);
         }
         return value;
@@ -1030,10 +1007,10 @@ export class FormFieldElementLinker extends FormFieldLinker {
         console.log("[FormFieldElementLinker._syncElementMetaValue] Syncing element meta value");
         const value = this.field.getMetaValue(metaKey, { raw: true });
         const status = this.type.setElementMetaValue(this.element, metaKey, value);
-        if (status === FormFieldTypeElementStatus.META_VALUE_SET_SUCCESS) {
+        if (status === FormTypeElementStatus.META_VALUE_SET_SUCCESS) {
             return;
         }
-        if (status === FormFieldTypeElementStatus.META_KEY_NOT_EXISTS) {
+        if (status === FormTypeElementStatus.META_KEY_NOT_EXISTS) {
             switch (metaKey) {
                 case "visible":
                     const container = this.field.getMetaValue("container") as HTMLElement;
@@ -1063,9 +1040,8 @@ export class FormFieldElementLinker extends FormFieldLinker {
                 case "autofill":
                     this.element.classList.toggle("autofill", !!value);
                     break;
-                case "optionsInitialized":
-                    // console.log("options initialized", !!value);
-                    if (value) {
+                case "options":
+                    if (value.length !== 0) {
                         this._syncElementValue();
                     }
                     break;
@@ -1078,7 +1054,7 @@ export class FormFieldElementLinker extends FormFieldLinker {
 
     _getElementMetaValue(metaKey: string): any {
         const [value, status] = this.type.getElementMetaValue(this.element, metaKey);
-        if (status !== FormFieldTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED) {
+        if (status !== FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED) {
             console.warn("[FormFieldElementLinker._getElementMetaValue] Failed to get value from element, status `%s`", status);
         }
         return value;
@@ -1129,7 +1105,7 @@ export class FormFields extends EventTarget {
     }
 }
 
-export interface Option {
+export interface SelectOption {
     value: string;
     textContent: string;
 }
@@ -1242,11 +1218,11 @@ export class Form extends EventTarget {
 
     registerElements(): void {
         for (const element of this.form.elements) {
-            if (!FormFieldType.isFormElement(element)) {
+            if (!FormType.isFormElement(element)) {
                 continue;
             }
             if (element.name === "") continue;
-            const field = new FormField(element.name, FormFieldType.fromFormElement(element), { changeSet: this.changeSet, effectManager: this.effectManager });
+            const field = new FormField(element.name, FormType.fromFormElement(element), { changeSet: this.changeSet, effectManager: this.effectManager });
             const fieldElementLinker = new FormFieldElementLinker(field, element);
             fieldElementLinker.link();
             this.fieldLinkers.push(fieldElementLinker);
@@ -1296,7 +1272,7 @@ export class Form extends EventTarget {
         });
     }
 
-    addComputedFieldEffect(fieldName: string, fieldType: FormFieldType, compute: () => Promise<any> | any, dependsOn: string[]): void {
+    addComputedFieldEffect(fieldName: string, fieldType: FormType, compute: () => Promise<any> | any, dependsOn: string[]): void {
         this.fields.add(new FormField(fieldName, fieldType, { changeSet: this.changeSet, effectManager: this.effectManager }))
         this.effectManager.addEffect(fieldName, {
             type: "computed-field",
@@ -1330,8 +1306,9 @@ export class Form extends EventTarget {
         });
     }
 
-    addSelectOptionsInitializerEffect(fieldName: string, getDefaultOption: () => Promise<Option> | Option, getOptions: () => Promise<Option[]> | Option[], dependsOn: string[]): void {
-        this.effectManager.addEffect(fieldName, {
+    addSelectOptionsInitializerEffect(fieldName: string, getDefaultOption: () => Promise<SelectOption> | SelectOption, getOptions: () => Promise<SelectOption[]> | SelectOption[], dependsOn: string[]): void {
+        this.effectManager.addDependency(getMetaDependencyKey(fieldName, "disabled"), getMetaDependencyKey(fieldName, "options"));
+        this.effectManager.addEffect(getMetaDependencyKey(fieldName, "options"), {
             type: "select-options-initializer",
             callback: async () => {
                 const defaultOption = await getDefaultOption();
@@ -1349,7 +1326,7 @@ export class Form extends EventTarget {
                 }
                 field.setValue(selectedValue);
                 field.setMetaValue("disabled", options.length === 0);
-                field.setMetaValue("optionsInitialized", options.length !== 0);
+                field.setMetaValue("options", [defaultOption, ...options]);
                 return field.processChanges();
             },
             dependsOn
