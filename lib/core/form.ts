@@ -374,14 +374,27 @@ export class FormTypeSelect extends FormType implements FormElementType {
 
     override getFieldValue(field: FormField): any {
         const value = field.getValue();
-        const optionValues = field.getMetaValue("options").map((option: SelectOption) => option.value);
+        const options = field.getMetaValue("options") as SelectOption[];
+        const optionValues = options.map(option => option.value);
 
         if (this._multiple) {
             return value.filter((value: any) => optionValues.includes(value));
         } else {
-            // Если значение не в options, возвращаем null
-            return optionValues.includes(value) ? value : null;
+            return optionValues.includes(value) ? value : options.find((option) => option.selected)?.value ?? options.find(option => !option.disabled)?.value ?? null;
         }
+    }
+
+    override setFieldValue(field: FormField, newValue: any): Set<string> {
+        const options = field.getMetaValue("options") as SelectOption[];
+        const optionValues = options.map((option: SelectOption) => option.value)
+        const validValue = this._multiple
+            ? Array.isArray(newValue)
+                ? newValue.filter((value: any) => optionValues.includes(value))
+                : []
+            : optionValues.includes(newValue)
+                ? newValue
+                : options.find((option) => option.selected)?.value ?? options.find(option => !option.disabled)?.value ?? null;
+        return field.setValue(validValue, { raw: true });
     }
 
     override getElementValue(element: HTMLSelectElement): [any, FormTypeElementStatus] {
@@ -403,7 +416,7 @@ export class FormTypeSelect extends FormType implements FormElementType {
             return [value, status];
         }
         if (metaKey === "options") {
-            return [Array.from(element.options, option => ({ value: option.value, textContent: option.textContent })), FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+            return [Array.from(element.options, option => ({ value: option.value || option.textContent, disabled: option.disabled, selected: option.selected, textContent: option.textContent })), FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
         }
         return [undefined, FormTypeElementStatus.META_KEY_NOT_EXISTS];
     }
@@ -415,11 +428,12 @@ export class FormTypeSelect extends FormType implements FormElementType {
         if (element.type !== this.asElementType()) {
             return FormTypeElementStatus.TYPE_MISMATCH;
         }
-        let options: (HTMLOptionElement | null)[];
-        options = (this._multiple ? newValue : [newValue]).map((value: any): HTMLOptionElement | null => {
-            return element.querySelector(`option[value="${value}"]`);
+        Array.from(element.selectedOptions).forEach(option => {
+            option.selected = false;
         });
-        (options as HTMLOptionElement[]).forEach(option => {
+        (this._multiple ? newValue as any[] : [newValue]).map((value: any): HTMLOptionElement | null => {
+            return element.querySelector(`option[value="${value}"]`);
+        }).filter(option => option != null).forEach(option => {
             option.selected = true;
         });
         return FormTypeElementStatus.VALUE_SET_SUCCESS;
@@ -433,6 +447,8 @@ export class FormTypeSelect extends FormType implements FormElementType {
             for (const option of newValue) {
                 const optionElement = document.createElement("option");
                 optionElement.value = option.value;
+                optionElement.disabled = option.disabled;
+                optionElement.selected = option.selected;
                 optionElement.textContent = option.textContent;
                 element.options.add(optionElement);
             }
@@ -1148,6 +1164,8 @@ export class FormFields extends EventTarget {
 export interface SelectOption {
     value: string;
     textContent: string;
+    disabled: boolean;
+    selected: boolean;
 }
 
 export abstract class FormChangesManager {
@@ -1354,7 +1372,7 @@ export class Form extends EventTarget {
                 const defaultOption = await getDefaultOption();
                 const options = await getOptions();
                 const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                const selectedValue = field.getValue({ disabledIsNull: false });                
+                const selectedValue = field.getValue({ disabledIsNull: false });
                 field.setValue(selectedValue);
                 field.setMetaValue("disabled", options.length === 0);
                 field.setMetaValue("options", [defaultOption, ...options]);
