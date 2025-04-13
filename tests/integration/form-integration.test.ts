@@ -10,11 +10,11 @@ describe("Form with Radio Buttons", () => {
     form = new Uoyroem.Form({ form: document.createElement("form") });
     await form.setup();
 
-    maleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    maleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
     maleRadioField.setValue("male", { raw: true, processChanges: true });
     form.fields.add(maleRadioField);
 
-    femaleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormFieldType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    femaleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
     femaleRadioField.setValue("female", { raw: true, processChanges: true });
     form.fields.add(femaleRadioField);
   });

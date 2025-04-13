@@ -174,19 +174,22 @@ export class FormType {
         }
         if (metaKey === "disabled") {
             element.disabled = Boolean(newValue);
-            return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
+        } else if (metaKey === "autofill") {
+            element.classList.toggle("autofill", Boolean(newValue));
+        } else {
+            return FormTypeElementStatus.META_KEY_NOT_EXISTS;
         }
-        return FormTypeElementStatus.META_KEY_NOT_EXISTS;
+        return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
     }
 
     getInitialValue(): any {
         return null;
     }
 
-    getInitialMeta(): Map<string, any> {
+    getInitialMeta(): Map<string, InitialMetaItem> {
         const meta = new Map();
-        meta.set("disabled", false);
-        meta.set("dirty", false);
+        meta.set("disabled", { value: false, resettable: false });
+        meta.set("dirty", { value: false, resettable: true });
         return meta;
     }
 
@@ -252,9 +255,9 @@ export class FormTypeRadio extends FormType implements FormElementType {
         return "radio";
     }
 
-    getInitialMeta(): Map<string, any> {
+    getInitialMeta(): Map<string, InitialMetaItem> {
         const meta = super.getInitialMeta();
-        meta.set("checked", false);
+        meta.set("checked", { value: false, resettable: true });
         return meta;
     }
 
@@ -297,9 +300,9 @@ export class FormTypeCheckbox extends FormType implements FormElementType {
         return "checkbox";
     }
 
-    getInitialMeta(): Map<string, any> {
+    getInitialMeta(): Map<string, InitialMetaItem> {
         const meta = super.getInitialMeta();
-        meta.set("checked", false);
+        meta.set("checked", { value: false, resettable: true });
         return meta;
     }
 
@@ -353,9 +356,9 @@ export class FormTypeSelect extends FormType implements FormElementType {
         return this._multiple ? "select-multiple" : "select-one";
     }
 
-    getInitialMeta(): Map<string, any> {
+    getInitialMeta(): Map<string, InitialMetaItem> {
         const meta = super.getInitialMeta();
-        meta.set("optionsInitialized", false);
+        meta.set("options", { value: [], resettable: false });
         return meta;
     }
 
@@ -582,6 +585,11 @@ export interface FormFieldContext {
     raw?: boolean;
 }
 
+export interface InitialMetaItem {
+    value: any;
+    resettable: boolean;
+}
+
 export class FormField extends EventTarget {
     private _name: string;
     private _type: FormType;
@@ -589,7 +597,7 @@ export class FormField extends EventTarget {
     private _initializedStateKeys: Set<string>;
     private _initialValue: any;
     private _valueMap: Map<string, any>;
-    private _initialMeta: Map<string, any>;
+    private _initialMeta: Map<string, InitialMetaItem>;
     private _metaMap: Map<string, Map<string, any>>;
     private _currentStateKey: string;
 
@@ -647,13 +655,17 @@ export class FormField extends EventTarget {
         this._initialMeta = new Map();
     }
 
-    reset({ stateKey = null, initiator = null, processChanges = false }: FormFieldContext = {}): Set<string> {
+    reset({ stateKey = null, initiator = null, processChanges = false, full = false }: FormFieldContext & { full?: boolean } = {}): Set<string> {
         stateKey ??= this._currentStateKey;
         console.log("[FormField.reset] Reset state `%s` for field `%s`", stateKey, this.name);
         this.setValue(this._initialValue, { raw: true, stateKey, initiator });
-        // for (const [metaKey, value] of this._initialMeta.entries()) {
-        //     this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
-        // }
+        if (full) {
+            this._metaMap.set(stateKey, new Map());
+        }
+        for (const [metaKey, item] of this._initialMeta.entries()) {
+            if (!full && !item.resettable) continue;
+            this.setMetaValue(metaKey, item.value, { raw: true, stateKey, initiator });
+        }
         return this.processChanges(null, !processChanges);
     }
 
@@ -661,12 +673,7 @@ export class FormField extends EventTarget {
         if (!this._initializedStateKeys.has(stateKey)) {
             console.log("[FormField.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
             this._initializedStateKeys.add(stateKey);
-            this.setValue(this._initialValue, { raw: true, stateKey, initiator });
-            this._metaMap.set(stateKey, new Map());
-            for (const [metaKey, value] of this._initialMeta.entries()) {
-                this.setMetaValue(metaKey, value, { raw: true, stateKey, initiator });
-            }
-            this.processChanges(null);
+            this.reset({ stateKey, initiator, processChanges: true, full: true });
         }
     }
 
@@ -805,8 +812,8 @@ export class FormField extends EventTarget {
         return meta!.get(metaKey);
     }
 
-    setInitialMetaValue(metaKey: string, newValue: any): void {
-        this._initialMeta.set(metaKey, newValue);
+    setInitialMetaValue(metaKey: string, newValue: any, { resettable = true }: { resettable?: boolean } = {}): void {
+        this._initialMeta.set(metaKey, { value: newValue, resettable });
     }
 
     setMetaValue(metaKey: string, newValue: any, { stateKey = null, initiator = null, processChanges = false, raw = false }: FormFieldContext = {}): Set<string> {
@@ -930,12 +937,15 @@ export class FormFieldElementLinker extends FormFieldLinker {
 
     override link(): void {
         this.field.setInitialValue(this._getElementValue());
-        this.field.setInitialMetaValue("disabled", [this._getElementMetaValue("disabled"), false]);
-        this.field.setInitialMetaValue("container", [this.element.parentElement, false]);
+        this.field.setInitialMetaValue("disabled", this._getElementMetaValue("disabled"), { resettable: false });
+        this.field.setInitialMetaValue("container", this.element.parentElement, { resettable: false });
         if (["radio", "checkbox"].includes(this.type.asElementType())) {
-            this.field.setInitialMetaValue("checked", [this._getElementMetaValue("checked"), true]);
+            this.field.setInitialMetaValue("checked", this._getElementMetaValue("checked"));
         }
-        this.field.reset({ processChanges: true, initiator: this });
+        if (["select-one", "select-multiple"].includes(this.type.asElementType())) {
+            this.field.setInitialMetaValue("options", this._getElementMetaValue("options"), { resettable: false })
+        }
+        this.field.reset({ processChanges: true, initiator: this, full: true });
 
         this.field.addEventListener("changes", this._fieldChangesEventListener);
         if (["text", "number", "textarea"].includes(this.type.asElementType())) {
@@ -1037,9 +1047,7 @@ export class FormFieldElementLinker extends FormFieldLinker {
                         container.dataset.visible = "false";
                     }
                     break;
-                case "autofill":
-                    this.element.classList.toggle("autofill", !!value);
-                    break;
+
                 case "options":
                     if (value.length !== 0) {
                         this._syncElementValue();

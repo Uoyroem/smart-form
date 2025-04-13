@@ -5,7 +5,7 @@ describe('FormField', () => {
 
     // Перед каждым тестом создаем новый экземпляр FormField с типом text
     beforeEach(() => {
-        const textType = Uoyroem.FormFieldType.text();
+        const textType = Uoyroem.FormType.text();
         formField = new Uoyroem.FormField('testField', textType);
     });
 
@@ -108,11 +108,11 @@ describe('FormField', () => {
 // Описываем тесты для метода FormField.getAdapter
 describe('FormField.getAdapter', () => {
     let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormFieldType;
+    let textType: Uoyroem.FormType;
 
     // Перед каждым тестом создаем новый экземпляр FormField с типом text
     beforeEach(() => {
-        textType = Uoyroem.FormFieldType.text();
+        textType = Uoyroem.FormType.text();
         formField = new Uoyroem.FormField('testField', textType);
     });
 
@@ -202,10 +202,10 @@ describe('FormField.getAdapter', () => {
 
 describe('FormField switchState', () => {
     let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormFieldType;
+    let textType: Uoyroem.FormType;
 
     beforeEach(() => {
-        textType = Uoyroem.FormFieldType.text();
+        textType = Uoyroem.FormType.text();
         formField = new Uoyroem.FormField('testField', textType);
     });
 
@@ -227,7 +227,7 @@ describe('FormField switchState', () => {
         formField.switchState({ stateKey: 'newState' });
 
         expect(formField['_initializedStateKeys'].has('newState')).toBe(true);
-        expect(resetSpy).toHaveBeenCalledWith({ stateKey: 'newState', initiator: null, processChanges: true });
+        expect(resetSpy).toHaveBeenCalledWith({ stateKey: 'newState', initiator: null, processChanges: true, full: true });
         expect(formField['_currentStateKey']).toBe('newState');
         expect(formField.getValue({ stateKey: 'newState', raw: true })).toBeNull();
     });

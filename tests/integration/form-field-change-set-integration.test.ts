@@ -7,7 +7,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
 
     beforeEach(() => {
         changeSet = new Uoyroem.FormFieldChangeSet();
-        field = new Uoyroem.FormField('test', Uoyroem.FormFieldType.text(), { changeSet });
+        field = new Uoyroem.FormField('test', Uoyroem.FormType.text(), { changeSet });
     });
 
     it('should track value changes and mark as processed', () => {
