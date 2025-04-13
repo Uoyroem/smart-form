@@ -778,10 +778,6 @@ export class FormField extends EventTarget {
             case "radio":
                 effectManager.addDependency(this.name, getMetaDependencyKey(this.name, "checked"));
                 break;
-            case "select-one":
-            case "select-multiple":
-                effectManager.addDependency(this.name, getMetaDependencyKey(this.name, "options"));
-                break;
         }
     }
 
@@ -1369,6 +1365,7 @@ export class Form extends EventTarget {
     }
 
     addSelectOptionsInitializerEffect(fieldName: string, getDefaultOption: () => Promise<SelectOption> | SelectOption, getOptions: () => Promise<SelectOption[]> | SelectOption[], dependsOn: string[]): void {
+        this.effectManager.addDependency(getMetaDependencyKey(fieldName, "disabled"), getMetaDependencyKey(fieldName, "options"));
         this.effectManager.addEffect(getMetaDependencyKey(fieldName, "options"), {
             type: "select-options-initializer",
             callback: async () => {
