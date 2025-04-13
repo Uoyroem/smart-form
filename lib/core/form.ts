@@ -372,6 +372,18 @@ export class FormTypeSelect extends FormType implements FormElementType {
         return this;
     }
 
+    override getFieldValue(field: FormField): any {
+        const value = field.getValue();
+        const optionValues = field.getMetaValue("options").map((option: SelectOption) => option.value);
+
+        if (this._multiple) {
+            return value.filter((value: any) => optionValues.includes(value));
+        } else {
+            // Если значение не в options, возвращаем null
+            return optionValues.includes(value) ? value : null;
+        }
+    }
+
     override getElementValue(element: HTMLSelectElement): [any, FormTypeElementStatus] {
         if (!FormType.isFormElement(element)) {
             return [undefined, FormTypeElementStatus.INVALID_ELEMENT];
@@ -385,6 +397,17 @@ export class FormTypeSelect extends FormType implements FormElementType {
         return [element.value, FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
     }
 
+    override getElementMetaValue(element: HTMLSelectElement, metaKey: string): [any, FormTypeElementStatus] {
+        const [value, status] = super.getElementMetaValue(element, metaKey);
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) {
+            return [value, status];
+        }
+        if (metaKey === "options") {
+            return [Array.from(element.options, option => ({ value: option.value, textContent: option.textContent })), FormTypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED];
+        }
+        return [undefined, FormTypeElementStatus.META_KEY_NOT_EXISTS];
+    }
+
     override setElementValue(element: HTMLSelectElement, newValue: any): FormTypeElementStatus {
         if (!FormType.isFormElement(element)) {
             return FormTypeElementStatus.INVALID_ELEMENT;
@@ -393,20 +416,29 @@ export class FormTypeSelect extends FormType implements FormElementType {
             return FormTypeElementStatus.TYPE_MISMATCH;
         }
         let options: (HTMLOptionElement | null)[];
-        if (this._multiple) {
-            options = newValue.map((value: any): HTMLOptionElement | null => {
-                return element.querySelector(`option[value="${value}"]`);
-            });
-        } else {
-            options = [
-                element.querySelector(`option[value="${newValue}"]`)
-            ]
-        }
-        if (options.some(option => option == null)) return FormTypeElementStatus.FAILED_TO_SET_VALUE;
+        options = (this._multiple ? newValue : [newValue]).map((value: any): HTMLOptionElement | null => {
+            return element.querySelector(`option[value="${value}"]`);
+        });
         (options as HTMLOptionElement[]).forEach(option => {
             option.selected = true;
         });
         return FormTypeElementStatus.VALUE_SET_SUCCESS;
+    }
+
+    override setElementMetaValue(element: HTMLSelectElement, metaKey: string, newValue: any): FormTypeElementStatus {
+        const status = super.setElementMetaValue(element, metaKey, newValue);
+        if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) return status;
+        if (metaKey === "options") {
+            element.innerHTML = "";
+            for (const option of newValue) {
+                const optionElement = document.createElement("option");
+                optionElement.value = option.value;
+                optionElement.textContent = option.textContent;
+                element.options.add(optionElement);
+            }
+            return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
+        }
+        return FormTypeElementStatus.META_KEY_NOT_EXISTS;
     }
 }
 
@@ -1321,17 +1353,8 @@ export class Form extends EventTarget {
             callback: async () => {
                 const defaultOption = await getDefaultOption();
                 const options = await getOptions();
-                const selectElement = this.getElement(fieldName) as HTMLSelectElement;
                 const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                const selectedValue = field.getValue({ disabledIsNull: false });
-                field.setValue(defaultOption.value);
-                selectElement.innerHTML = "";
-                for (const option of [defaultOption, ...options]) {
-                    const optionElement = document.createElement("option");
-                    optionElement.value = option.value;
-                    optionElement.textContent = option.textContent;
-                    selectElement.options.add(optionElement);
-                }
+                const selectedValue = field.getValue({ disabledIsNull: false });                
                 field.setValue(selectedValue);
                 field.setMetaValue("disabled", options.length === 0);
                 field.setMetaValue("options", [defaultOption, ...options]);
