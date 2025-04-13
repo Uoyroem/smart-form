@@ -1168,8 +1168,8 @@ export class FormFields extends EventTarget {
 export interface SelectOption {
     value: string;
     textContent: string;
-    disabled: boolean;
-    selected: boolean;
+    disabled?: boolean;
+    selected?: boolean;
 }
 
 export abstract class FormChangesManager {
