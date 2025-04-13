@@ -747,7 +747,7 @@ export class FormField extends EventTarget {
 
         for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
             const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
-            if (oldValue !== newValue) {
+            if (!deepEqual(oldValue, newValue)) {
                 const change: FormFieldChange = {
                     stateKey,
                     type: FormFieldChangeType.MetaValue,
