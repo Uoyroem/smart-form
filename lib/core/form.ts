@@ -378,9 +378,9 @@ export class FormTypeSelect extends FormType implements FormElementType {
         const optionValues = options.map(option => option.value);
 
         if (this._multiple) {
-            return value.filter((value: any) => optionValues.includes(value));
+            return value.filter((value: any) => optionValues.some(optionValue => optionValue == value));
         } else {
-            return optionValues.includes(value) ? value : options.find((option) => option.selected)?.value ?? options.find(option => !option.disabled)?.value ?? null;
+            return optionValues.some(optionValue => optionValue == value) ? value : options.find((option) => option.selected)?.value ?? options.find(option => !option.disabled)?.value ?? null;
         }
     }
 
@@ -389,12 +389,12 @@ export class FormTypeSelect extends FormType implements FormElementType {
         const optionValues = options.map((option: SelectOption) => option.value)
         const validValue = this._multiple
             ? Array.isArray(newValue)
-                ? newValue.filter((value: any) => optionValues.includes(value))
+                ? newValue.filter((value: any) => optionValues.some(optionValue => optionValue == value))
                 : []
-            : optionValues.includes(newValue)
+            : optionValues.some(optionValue => optionValue == newValue)
                 ? newValue
                 : options.find((option) => option.selected)?.value ?? options.find(option => !option.disabled)?.value ?? null;
-        return field.setValue(validValue, { raw: true });
+        return field.setValue(validValue);
     }
 
     override getElementValue(element: HTMLSelectElement): [any, FormTypeElementStatus] {
