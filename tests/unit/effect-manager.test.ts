@@ -10,9 +10,12 @@ describe('EffectManager', () => {
   });
 
   it('should add effect and build dependencies', () => {
-    effectManager.addEffect("effect1", {
-      type: "test",
-      callback: () => Promise.resolve(new Set()),
+    effectManager.registerNode({
+      key: "effect1",
+      value: {
+        type: "test",
+        callback: () => Promise.resolve(new Set()),
+      },
       dependsOn: ["dep1", "dep2"]
     });
 
@@ -22,15 +25,23 @@ describe('EffectManager', () => {
   });
 
   it('should detect cyclic dependencies', () => {
-    effectManager.addEffect("effect1", {
-      type: "test",
-      callback: () => Promise.resolve(new Set()),
+    effectManager.registerNode({
+      key: "effect1",
+      value: {
+
+        type: "test",
+        callback: () => Promise.resolve(new Set()),
+      },
       dependsOn: ["effect2"]
     });
 
-    effectManager.addEffect("effect2", {
-      type: "test",
-      callback: () => Promise.resolve(new Set()),
+    effectManager.registerNode({
+      key: "effect2",
+      value: {
+
+        type: "test",
+        callback: () => Promise.resolve(new Set()),
+      },
       dependsOn: ["effect1"]
     });
 
@@ -40,20 +51,26 @@ describe('EffectManager', () => {
   it('should trigger effects in topological order', async () => {
     const calls: string[] = [];
 
-    effectManager.addEffect("effect1", {
-      type: "test",
-      callback: () => {
-        calls.push("effect1");
-        return Promise.resolve(new Set());
+    effectManager.registerNode({
+      key: "effect1",
+      value: {
+        type: "test",
+        callback: () => {
+          calls.push("effect1");
+          return Promise.resolve(new Set());
+        },
       },
       dependsOn: ["effect2"]
     });
 
-    effectManager.addEffect("effect2", {
-      type: "test",
-      callback: () => {
-        calls.push("effect2");
-        return Promise.resolve(new Set());
+    effectManager.registerNode({
+      key: "effect2",
+      value: {
+        type: "test",
+        callback: () => {
+          calls.push("effect2");
+          return Promise.resolve(new Set());
+        },
       },
       dependsOn: []
     });

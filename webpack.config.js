@@ -8,15 +8,7 @@ const commonConfig = {
     rules: [
       {
         test: /\.ts$/,
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: [
-              ['@babel/preset-env', { targets: 'defaults' }],
-              '@babel/preset-typescript',
-            ],
-          },
-        },
+        use: 'babel-loader',
         exclude: /node_modules/,
       },
     ],
@@ -54,9 +46,7 @@ const productionConfig = {
   ],
   optimization: {
     minimize: true,
-    splitChunks: {
-      chunks: 'all',
-    },
+    splitChunks: false
   },
 };
 

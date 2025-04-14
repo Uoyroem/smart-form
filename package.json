@@ -23,6 +23,7 @@
   "description": "",
   "devDependencies": {
     "@babel/core": "^7.26.10",
+    "@babel/plugin-transform-runtime": "^7.26.10",
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-typescript": "^7.27.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -44,5 +45,10 @@
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.1"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.27.0",
+    "@babel/runtime-corejs3": "^7.27.0",
+    "core-js": "^3.41.0"
   }
 }

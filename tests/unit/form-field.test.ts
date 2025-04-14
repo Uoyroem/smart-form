@@ -308,3 +308,80 @@ describe('FormField switchState', () => {
         expect(valueChange.initiator).toBe('testInitiator');
     });
 });
+
+describe('Form select one field', () => {
+    let field: Uoyroem.FormField;
+    const defaultOptions = [
+        {
+            textContent: "Алматы",
+            value: "almaty"
+        },
+        {
+            textContent: "Астана",
+            value: "astana",
+            selected: true
+        },
+        {
+            textContent: "Шымкент",
+            value: "shumkent"
+        },
+    ];
+    beforeEach(() => {
+        field = new Uoyroem.FormField("city", Uoyroem.FormType.select());
+        field.setMetaValue("options", defaultOptions, { processChanges: true });
+    });
+
+    it('should default selected astana', () => {
+        expect(field.getValue()).toBe("astana");
+    });
+
+    it('should returns default selected if value not in options', () => {
+        field.setValue("unkown");
+        expect(field.getValue({ raw: true })).toBe("unkown");
+        expect(field.getValue()).toBe("astana");
+    });
+
+    it("should returns value", () => {
+        field.setValue("shumkent");
+        expect(field.getValue()).toBe("shumkent");
+    });
+});
+
+describe('Form select multiple field', () => {
+    let field: Uoyroem.FormField;
+    const defaultOptions = [
+        {
+            textContent: "John",
+            value: "user1"
+        },
+        {
+            textContent: "Dohn",
+            value: "user2",
+            selected: true
+        },
+        {
+            textContent: "Paul",
+            value: "user3"
+        },
+    ];
+    beforeEach(() => {
+        field = new Uoyroem.FormField("user", Uoyroem.FormType.select({ multiple: true }));
+        field.setValue([], { processChanges: true });
+        field.setMetaValue("options", defaultOptions, { processChanges: true });
+    });
+    it("should default empty list", () => {
+        expect(field.getValue()).toEqual([]);
+    });
+
+    it("should return empty list if values not in options", () => {
+        field.setValue(["unkown-user-1", "unkown-user-2"], { processChanges: true });
+        expect(field.getValue({ raw: true })).toEqual(["unkown-user-1", "unkown-user-2"]);
+        expect(field.getValue()).toEqual([]);
+    });
+
+    it("should return partial selected values which in options", () => {
+        field.setValue(["unkown-user-1", "user2"], { processChanges: true });
+        expect(field.getValue({ raw: true })).toEqual(["unkown-user-1", "user2"]);
+        expect(field.getValue()).toEqual(["user2"]);
+    });
+});
