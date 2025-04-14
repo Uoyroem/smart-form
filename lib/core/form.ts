@@ -1267,7 +1267,7 @@ export class Form extends EventTarget {
             this.form.classList.add("ss-form");
             this.form.addEventListener("submit", (event) => {
                 event.preventDefault();
-                this.submit().then(() => this.reset());
+                this.submit();
             });
 
             this.form.addEventListener("reset", (event) => {
