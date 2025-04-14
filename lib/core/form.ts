@@ -474,12 +474,17 @@ export class FormTypeSelect extends FormType implements FormElementType {
         const status = super.setElementMetaValue(element, metaKey, newValue);
         if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) return status;
         if (metaKey === "options") {
+            const selectedOptionValues = Array.from(element.selectedOptions, option => option.value);
             element.innerHTML = "";
             for (const option of newValue) {
                 const optionElement = document.createElement("option");
                 optionElement.value = option.value;
+                if (selectedOptionValues.length !== 0 && selectedOptionValues.includes(option.value)) {
+                    optionElement.selected = true;
+                } else {
+                    optionElement.selected = option.selected;
+                }
                 optionElement.disabled = option.disabled;
-                optionElement.selected = option.selected;
                 optionElement.textContent = option.textContent;
                 element.options.add(optionElement);
             }
