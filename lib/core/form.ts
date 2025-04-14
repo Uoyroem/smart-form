@@ -474,21 +474,15 @@ export class FormTypeSelect extends FormType implements FormElementType {
         const status = super.setElementMetaValue(element, metaKey, newValue);
         if (status !== FormTypeElementStatus.META_KEY_NOT_EXISTS) return status;
         if (metaKey === "options") {
-            const selectedOptionValues = Array.from(element.selectedOptions, option => option.value);
             element.innerHTML = "";
             for (const option of newValue) {
                 const optionElement = document.createElement("option");
                 optionElement.value = option.value;
-                if (selectedOptionValues.length !== 0 && selectedOptionValues.includes(option.value)) {
-                    optionElement.selected = true;
-                } else {
-                    optionElement.selected = option.selected;
-                }
+                optionElement.selected = option.selected;
                 optionElement.disabled = option.disabled;
                 optionElement.textContent = option.textContent;
                 element.options.add(optionElement);
             }
-
             return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
         return FormTypeElementStatus.META_KEY_NOT_EXISTS;
@@ -1104,6 +1098,12 @@ export class FormFieldElementLinker extends FormFieldLinker {
         const value = this.field.getMetaValue(metaKey, { raw: true });
         const status = this.type.setElementMetaValue(this.element, metaKey, value);
         if (status === FormTypeElementStatus.META_VALUE_SET_SUCCESS) {
+            switch (metaKey) {
+                case "options":
+                    if (value.length !== 0) {
+                        this._syncElementValue();
+                    }
+            }
             return;
         }
         if (status === FormTypeElementStatus.META_KEY_NOT_EXISTS) {
