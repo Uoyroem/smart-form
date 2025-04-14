@@ -1427,7 +1427,7 @@ export class Form extends EventTarget {
                     const defaultOption = await getDefaultOption();
                     const options = await getOptions();
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
-                    const selectedValue = field.getValue({ disabledIsNull: false });
+                    const selectedValue = field.getValue({ disabledIsNull: false, raw: true });
                     field.setValue(selectedValue);
                     field.setMetaValue("disabled", options.length === 0);
                     field.setMetaValue("options", [defaultOption, ...options]);
