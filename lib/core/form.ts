@@ -1085,11 +1085,15 @@ export class FormFieldElementLinker extends FormFieldLinker {
                             container.dataset.visible = "true";
                         }
                     } else {
-                        if (container.style.display !== "none") {
-                            this._handleHideContainer = (event: Event) => {
-                                container.style.display = "none";
-                            };
-                            container.addEventListener("transitionend", this._handleHideContainer, { once: true });
+                        if (container.checkVisibility()) {
+                            if (container.style.display !== "none") {
+                                this._handleHideContainer = (event: Event) => {
+                                    container.style.display = "none";
+                                };
+                                container.addEventListener("transitionend", this._handleHideContainer, { once: true });
+                            }
+                        } else {
+                            container.style.display = "none";
                         }
                         container.dataset.visible = "false";
                     }
