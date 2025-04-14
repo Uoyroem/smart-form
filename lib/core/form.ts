@@ -1335,7 +1335,7 @@ export class Form extends EventTarget {
 
     reset(): void {
         for (const field of this.fields.list) {
-            field.reset({ initiator: this });
+            field.reset({ initiator: this, processChanges: true });
         }
         this.effectManager.triggerEffects();
     }
