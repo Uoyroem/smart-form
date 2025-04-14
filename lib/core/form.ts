@@ -1468,7 +1468,7 @@ export class Form extends EventTarget {
     }
 
     addComputedFieldEffect(fieldName: string, fieldType: FormType, compute: () => Promise<any> | any, dependsOn: string[]): void {
-        this.fields.add(new FormField(fieldName, fieldType, { changeSet: this.changeSet, effectManager: this.effectManager }))
+        this.addField(fieldName, fieldType);
         this.effectManager.registerNode({
             key: fieldName,
             value: {
