@@ -87,6 +87,10 @@ export class FormType {
         return new FormTypeDate();
     }
 
+    static month() {
+        return new FormTypeMonth();
+    }
+
     static select({ multiple = false } = {}) {
         return new FormTypeSelect().multiple(multiple);
     }
@@ -121,6 +125,8 @@ export class FormType {
                 return this.radio();
             case "date":
                 return this.date();
+            case "month":
+                return this.month();
             default:
                 throw new Error(`As element type ${element} not has`);
         }
@@ -260,7 +266,21 @@ export class FormTypeDate extends FormType implements FormPrimitiveType, FormEle
     }
 
     isEqual(a: any, b: any): boolean {
-        return a.toDateString() === b.toDateString();
+        return a === b;
+    }
+}
+
+export class FormTypeMonth extends FormType implements FormPrimitiveType, FormElementType {
+    constructor() {
+        super("Month");
+    }
+
+    asElementType(): string {
+        return "month";
+    }
+
+    isEqual(a: any, b: any): boolean {
+        return a === b;
     }
 }
 
@@ -463,6 +483,7 @@ export class FormTypeSelect extends FormType implements FormElementType {
                 optionElement.textContent = option.textContent;
                 element.options.add(optionElement);
             }
+
             return FormTypeElementStatus.META_VALUE_SET_SUCCESS;
         }
         return FormTypeElementStatus.META_KEY_NOT_EXISTS;
@@ -742,6 +763,7 @@ export class FormField extends EventTarget {
         for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
             const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
             if (!deepEqual(oldValue, newValue)) {
+                console.log("[FormField.switchState] Field meta value %s has change between stages", getMetaDependencyKey(this.name, metaKey));
                 const change: FormFieldChange = {
                     stateKey,
                     type: FormFieldChangeType.MetaValue,
@@ -760,6 +782,7 @@ export class FormField extends EventTarget {
         const oldValue = this._valueMap.get(this._currentStateKey);
         const newValue = this._valueMap.get(stateKey);
         if (!this.type.isEqual(oldValue, newValue)) {
+            console.log("[FormField.switchState] Field value %s has change between stages", this.name)
             const change: FormFieldChange = {
                 stateKey,
                 type: FormFieldChangeType.Value,
