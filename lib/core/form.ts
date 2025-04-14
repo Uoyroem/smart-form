@@ -706,7 +706,6 @@ export class FormField extends EventTarget {
     reset({ stateKey = null, initiator = null, processChanges = false, full = false }: FormFieldContext & { full?: boolean } = {}): Set<string> {
         stateKey ??= this._currentStateKey;
         console.log("[FormField.reset] Reset state `%s` for field `%s`", stateKey, this.name);
-        this.setValue(this._initialValue, { raw: true, stateKey, initiator });
         if (full) {
             this._metaMap.set(stateKey, new Map());
         }
@@ -714,6 +713,7 @@ export class FormField extends EventTarget {
             if (!full && !item.resettable) continue;
             this.setMetaValue(metaKey, item.value, { raw: true, stateKey, initiator });
         }
+        this.setValue(this._initialValue, { raw: true, stateKey, initiator });
         return this.processChanges(null, !processChanges);
     }
 
@@ -728,23 +728,6 @@ export class FormField extends EventTarget {
     switchState({ stateKey, initiator = null, processChanges = false }: FormFieldContext & { stateKey: string }): Set<string> {
         console.log("[FormField.switchState] Switching state for field `%s` from `%s` to `%s`", this.name, this._currentStateKey, stateKey);
         this.initializeState({ stateKey, initiator });
-        const oldValue = this._valueMap.get(this._currentStateKey);
-        const newValue = this._valueMap.get(stateKey);
-        if (!this.type.isEqual(oldValue, newValue)) {
-            const change: FormFieldChange = {
-                stateKey,
-                type: FormFieldChangeType.Value,
-                field: this,
-                initiator,
-                oldValue,
-                newValue,
-                date: new Date(),
-                last: true,
-                processed: false
-            };
-            this.changeSet.add(change);
-        }
-
         for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
             const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
             if (!deepEqual(oldValue, newValue)) {
@@ -762,6 +745,22 @@ export class FormField extends EventTarget {
                 };
                 this.changeSet.add(change);
             }
+        }
+        const oldValue = this._valueMap.get(this._currentStateKey);
+        const newValue = this._valueMap.get(stateKey);
+        if (!this.type.isEqual(oldValue, newValue)) {
+            const change: FormFieldChange = {
+                stateKey,
+                type: FormFieldChangeType.Value,
+                field: this,
+                initiator,
+                oldValue,
+                newValue,
+                date: new Date(),
+                last: true,
+                processed: false
+            };
+            this.changeSet.add(change);
         }
         this._currentStateKey = stateKey;
         return this.processChanges(null, !processChanges);
