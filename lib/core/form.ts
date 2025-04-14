@@ -45,6 +45,19 @@ export function deepEqual(a: any, b: any): boolean {
     return true;
 }
 
+export function readFile(file: File) {
+    return new Promise((resolve, reason) => {
+        const reader = new FileReader();
+        reader.onload = function () {
+            const content = (reader.result as string | null)?.split(',')?.[1];
+            if (content) {
+                resolve(content);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 export function getMetaDependencyKey(fieldName: string, metaKey: string) {
     return `${fieldName}:${metaKey}`;
 }
@@ -77,6 +90,10 @@ export class FormType {
 
     static text() {
         return new FormTypeText();
+    }
+
+    static file({ multiple = false } = {}) {
+        return new FormTypeFile().multiple(multiple);
     }
 
     static number() {
@@ -127,6 +144,8 @@ export class FormType {
                 return this.date();
             case "month":
                 return this.month();
+            case "file":
+                return this.file({ multiple: (element as HTMLInputElement).multiple });
             default:
                 throw new Error(`As element type ${element} not has`);
         }
@@ -225,6 +244,55 @@ export class FormType {
 
     isSameType(otherType: FormType): boolean {
         return this.name === otherType.name;
+    }
+}
+
+export class FormTypeFile extends FormType implements FormElementType {
+    private _multiple: boolean = false;
+
+    constructor() {
+        super("File");
+    }
+
+    multiple(value: boolean = true): this {
+        this._multiple = value;
+        return this;
+    }
+
+    asElementType(): string {
+        return "file";
+    }
+
+    override getElementValue(element: HTMLInputElement): [any, FormTypeElementStatus] {
+        if (!FormType.isFormElement(element)) {
+            return [undefined, FormTypeElementStatus.INVALID_ELEMENT];
+        }
+        if (element.type !== this.asElementType()) {
+            return [undefined, FormTypeElementStatus.TYPE_MISMATCH];
+        }
+        if (this._multiple) {
+            return [element.files && Array.from(element.files), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        }
+        return [element.files && element.files[0], FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+    }
+
+    override setElementValue(element: HTMLInputElement, newValue: any): FormTypeElementStatus {
+        if (!FormType.isFormElement(element)) {
+            return FormTypeElementStatus.INVALID_ELEMENT;
+        }
+        if (element.type !== this.asElementType()) {
+            return FormTypeElementStatus.TYPE_MISMATCH;
+        }
+        const dataTransfer = new DataTransfer();
+        if (this._multiple) {
+            for (const file of newValue) {
+                dataTransfer.items.add(file);
+            }
+        } else {
+            dataTransfer.items.add(newValue);
+        }
+        element.files = dataTransfer.files;
+        return FormTypeElementStatus.VALUE_SET_SUCCESS;
     }
 }
 
@@ -1243,6 +1311,23 @@ export class FormChangesForTriggerEffectsManager extends FormChangesManager {
     }
 }
 
+// export class FormData {
+//     constructor(public readonly form: Form) {
+//         const formData = []
+//         for (const field of form.fields.list) {
+//             formData, field.getValue({ raw: true });
+//         }
+//     }
+
+//     get(name: string): any {
+
+//     }
+
+//     getAll(name: string): any[] {
+
+//     }
+// }
+
 export class Form extends EventTarget {
     public form: HTMLFormElement;
     public effectManager: EffectManager;
@@ -1343,6 +1428,10 @@ export class Form extends EventTarget {
             field.reset({ initiator: this, processChanges: true });
         }
         this.effectManager.triggerEffects();
+    }
+
+    addField(fieldName: string, type: FormType): void {
+        this.fields.add(new FormField(fieldName, type, { changeSet: this.changeSet, effectManager: this.effectManager }));
     }
 
     addDisableWhenEffect(fieldName: string, disableWhen: () => Promise<boolean> | boolean, dependsOn: string[]): void {
