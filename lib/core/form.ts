@@ -1306,7 +1306,7 @@ export class Form extends EventTarget {
     updateFormData(formData: Record<string, any>) {
         for (const fieldName of this.fields) {
             if (!(fieldName in formData)) continue;
-            this.fields.get(fieldName).setValue(formData[fieldName], { initiator: this });
+            this.fields.get(fieldName).setValue(formData[fieldName], { initiator: this, processChanges: true });
         }
         this.effectManager.triggerEffects();
     }
