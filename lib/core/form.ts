@@ -568,8 +568,8 @@ export class FormTypeObject extends FormType implements FormPrimitiveType {
 }
 
 export enum FormFieldChangeType {
-    Value,
-    MetaValue
+    Value = "value",
+    MetaValue = "meta-value"
 }
 
 export interface FormFieldValueChange {
