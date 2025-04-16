@@ -1311,22 +1311,68 @@ export class FormChangesForTriggerEffectsManager extends FormChangesManager {
     }
 }
 
-// export class FormData {
-//     constructor(public readonly form: Form) {
-//         const formData = []
-//         for (const field of form.fields.list) {
-//             formData, field.getValue({ raw: true });
-//         }
-//     }
+export abstract class FormData {
+    constructor(public readonly form: Form) { }
 
-//     get(name: string): any {
 
-//     }
+    abstract get(fieldName: string): any;
+    abstract getAll(fieldName: string): any[];
+}
 
-//     getAll(name: string): any[] {
+export class DynamicFormData extends FormData {
+    constructor(form: Form) { super(form); }
 
-//     }
-// }
+    get(fieldName: string): any { }
+
+    getAll(fieldName: string): any[] {
+        return [];
+    }
+}
+
+export class StaticFormData extends FormData {
+    constructor(form: Form) { super(form); }
+
+    get(fieldName: string): any {
+
+    }
+
+    getAll(fieldName: string): any[] {
+        return [];
+    }
+}
+
+export class FormElement_ {
+    constructor(public readonly element: Element) { }
+
+    getValue(options: object): any { }
+    getMetaValue(metaKey: string, options: object): any { }
+    setValue(newValue: any, options: object): any { }
+    setMetaValue(metaKey: string, newValue: any, options: object): any { }
+}
+
+export abstract class FormBackend {
+    constructor(public readonly form: Form) { }
+
+    abstract getFieldValue(field: FormField, options?: object): any;
+    abstract getFieldMetaValue(field: FormField, metaKey: string, options?: object): any;
+    abstract setFieldValue(field: FormField, newValue: any, options?: object): void;
+    abstract setFieldMetaValue(field: FormField, metaKey: string, newValue: any, options?: object): void;
+
+    abstract getElementValue(element: FormElement, options?: object): any;
+    abstract getElementMetaValue(element: FormElement, metaKey: string, options?: object): any;
+    abstract setElementValue(element: FormElement, newValue: any, options?: object): void;
+    abstract setElementMetaValue(element: FormElement, metaKey: string, newValue: any, options?: object): void;
+
+    abstract getArrayFieldValue(fields: FormField[], options?: object): any;
+    abstract getArrayFieldMetaValue(fields: FormField[], metaKey: string, options?: object): any;
+    abstract setArrayFieldValue(fields: FormField[], newValue: string, options?: object): void;
+    abstract setArrayFieldMetaValue(fields: FormField[], metaKey: string, newValue: string, options?: object): void;
+
+    abstract getArrayElementValue(elements: FormElement[], options?: object): any;
+    abstract getArrayElementMetaValue(elements: FormElement[], metaKey: string, options?: object): any;
+    abstract setArrayElementValue(elements: FormElement[], newValue: any, options?: object): void;
+    abstract setArrayElementMetaValue(elements: FormElement[], metaKey: string, newValue: any, options?: object): void;
+}
 
 interface FocusActionClickElement {
     type: "click";
