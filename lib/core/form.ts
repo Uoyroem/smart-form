@@ -1,4 +1,5 @@
 import { EffectManager } from "./effect-manager";
+import { FormDataManager, FormAccessError, FormAccessRequest, FormAccessResult, } from "./form-data-manager";
 export { EffectManager };
 
 export function isVisible(element: HTMLElement) {
@@ -1350,29 +1351,7 @@ export class FormElement_ {
     setMetaValue(metaKey: string, newValue: any, options: object): any { }
 }
 
-export abstract class FormBackend {
-    constructor(public readonly form: Form) { }
 
-    abstract getFieldValue(field: FormField, options?: object): any;
-    abstract getFieldMetaValue(field: FormField, metaKey: string, options?: object): any;
-    abstract setFieldValue(field: FormField, newValue: any, options?: object): void;
-    abstract setFieldMetaValue(field: FormField, metaKey: string, newValue: any, options?: object): void;
-
-    abstract getElementValue(element: FormElement, options?: object): any;
-    abstract getElementMetaValue(element: FormElement, metaKey: string, options?: object): any;
-    abstract setElementValue(element: FormElement, newValue: any, options?: object): void;
-    abstract setElementMetaValue(element: FormElement, metaKey: string, newValue: any, options?: object): void;
-
-    abstract getArrayFieldValue(fields: FormField[], options?: object): any;
-    abstract getArrayFieldMetaValue(fields: FormField[], metaKey: string, options?: object): any;
-    abstract setArrayFieldValue(fields: FormField[], newValue: string, options?: object): void;
-    abstract setArrayFieldMetaValue(fields: FormField[], metaKey: string, newValue: string, options?: object): void;
-
-    abstract getArrayElementValue(elements: FormElement[], options?: object): any;
-    abstract getArrayElementMetaValue(elements: FormElement[], metaKey: string, options?: object): any;
-    abstract setArrayElementValue(elements: FormElement[], newValue: any, options?: object): void;
-    abstract setArrayElementMetaValue(elements: FormElement[], metaKey: string, newValue: any, options?: object): void;
-}
 
 interface FocusActionClickElement {
     type: "click";
