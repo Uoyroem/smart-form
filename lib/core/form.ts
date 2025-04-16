@@ -1328,21 +1328,35 @@ export class FormChangesForTriggerEffectsManager extends FormChangesManager {
 //     }
 // }
 
+interface FocusActionClickElement {
+    type: "click";
+    element: HTMLElement;
+}
+
+interface FocusActionCallback {
+    type: "callback";
+    callback: () => void;
+}
+
+type FocusAction = FocusActionClickElement | FocusActionCallback;
+
 export class Form extends EventTarget {
     public form: HTMLFormElement;
     public effectManager: EffectManager;
     public fields: FormFields;
     public fieldLinkers: FormFieldLinker[];
     public changeSet: FormFieldChangeSet;
+    public focusActions: FocusAction[];
     private _changesManagers: FormChangesManager[];
 
-    constructor({ form }: { form: HTMLFormElement }) {
+    constructor({ form, focusActions }: { form: HTMLFormElement, focusActions?: FocusAction[] }) {
         super();
         this.form = form;
         this.changeSet = new FormFieldChangeSet();
         this.effectManager = new EffectManager();
         this.fields = new FormFields();
         this.fieldLinkers = [];
+        this.focusActions = focusActions ?? [];
         this._changesManagers = [];
         this._handleChanges = this._handleChanges.bind(this);
     }
@@ -1364,6 +1378,21 @@ export class Form extends EventTarget {
             this.registerChangesManager(new FormChangesForRadioManager());
             this.registerChangesManager(new FormChangesForTriggerEffectsManager());
             this.registerElements();
+        }
+    }
+
+    async focus() {
+        for (const focusAction of this.focusActions) {
+            switch (focusAction.type) {
+                case "click":
+                    focusAction.element.click();
+                    break;
+                case "callback":
+                    focusAction.callback();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
