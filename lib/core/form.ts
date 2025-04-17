@@ -85,6 +85,7 @@ export type FormElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaEle
 
 export enum FormTypeElementStatus {
     VALUE_SUCCESSFULLY_RECEIVED = "value-successfully-received",
+    PROMISE = "promise",
     VALUE_SET_SUCCESS = "value-set-success",
     META_VALUE_SUCCESSFULLY_RECEIVED = "meta-value-successfully-received",
     META_VALUE_SET_SUCCESS = "meta-value-set-success",
@@ -290,9 +291,9 @@ export class FormTypeFile extends FormType implements FormElementType {
             return [undefined, FormTypeElementStatus.TYPE_MISMATCH];
         }
         if (this._multiple) {
-            return [element.files && Array.from(element.files), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+            return [Promise.all(Array.from(element.files!, file => fileToJson(file))).then(jsonFiles => jsonFiles), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [element.files && element.files[0], FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        return [fileToJson(element.files![0]).then(jsonFile => jsonFile), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
     }
 
     override setElementValue(element: HTMLInputElement, newValue: any): FormTypeElementStatus {
@@ -305,10 +306,10 @@ export class FormTypeFile extends FormType implements FormElementType {
         const dataTransfer = new DataTransfer();
         if (this._multiple) {
             for (const file of newValue) {
-                dataTransfer.items.add(file);
+                dataTransfer.items.add(jsonToFile(file));
             }
         } else {
-            dataTransfer.items.add(newValue);
+            dataTransfer.items.add(jsonToFile(newValue));
         }
         element.files = dataTransfer.files;
         return FormTypeElementStatus.VALUE_SET_SUCCESS;
@@ -1177,7 +1178,12 @@ export class FormFieldElementLinker extends FormFieldLinker {
 
     _syncFieldValue(): void {
         console.log("[FormFieldElementLinker._syncFieldValue] Syncing field value");
-        this.field.setValue(this._getElementValue(), { initiator: this, processChanges: true, raw: true });
+        const value = this._getElementValue();
+        if (value instanceof Promise) {
+            value.then(value => this.field.setValue(value, { initiator: this, processChanges: true, raw: true }));
+        } else {
+            this.field.setValue(value, { initiator: this, processChanges: true, raw: true });
+        }
     }
 
     _syncElementMetaValue(metaKey: string): void {
