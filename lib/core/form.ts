@@ -291,9 +291,9 @@ export class FormTypeFile extends FormType implements FormElementType {
             return [undefined, FormTypeElementStatus.TYPE_MISMATCH];
         }
         if (this._multiple) {
-            return [Promise.all(Array.from(element.files!, file => fileToJson(file))).then(jsonFiles => jsonFiles), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+            return [element.files!.length === 0 ? [] : Promise.all(Array.from(element.files!, file => fileToJson(file))).then(jsonFiles => jsonFiles), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
         }
-        return [fileToJson(element.files![0]).then(jsonFile => jsonFile), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
+        return [element.files!.length === 0 ? null : fileToJson(element.files![0]).then(jsonFile => jsonFile), FormTypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED];
     }
 
     override setElementValue(element: HTMLInputElement, newValue: any): FormTypeElementStatus {
