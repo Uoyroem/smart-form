@@ -330,12 +330,16 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
         });
         return new Proxy(element, {
             get(target, propertyKey, receiver) {
-                switch (propertyKey) {
-                    case "value":
-                        return mask.unmaskedValue;
-                    default:
-                        return Reflect.get(target, propertyKey, receiver);
+                if (propertyKey === 'value') {
+                    return mask.unmaskedValue; // Перехват геттера
                 }
+                const value = target[propertyKey];
+                if (value instanceof Function) {
+                    return function (this: any, ...args: any) {
+                        return value.apply(this === receiver ? target : this, args);
+                    };
+                }
+                return value;
             },
             set(target, propertyKey, newValue, receiver) {
                 switch (propertyKey) {
@@ -343,7 +347,8 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
                         mask.unmaskedValue = newValue;
                         return true;
                     default:
-                        return Reflect.set(target, propertyKey, newValue, receiver);
+                        element[propertyKey] = newValue;
+                        return true;
                 }
             },
         });
