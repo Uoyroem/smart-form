@@ -184,6 +184,7 @@ export class Type {
 
     isValuesEqual(a: any, b: any): boolean { return a === b; }
     asElementType() { return "hidden"; }
+    wrap(element: any): any { return element; }
 
     getFieldValue(field: Field): any {
         return field.getValue();
@@ -311,6 +312,10 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
 
     asElementType(): string {
         return this._masked ? "text" : "number";
+    }
+
+    wrap(element: any): any {
+        return this._masked ? this.mask(element) : element;
     }
 
     mask(element: any): any {
@@ -1463,8 +1468,10 @@ export class Form extends EventTarget {
     registerElements(): void {
         for (const element of this.form.elements as any) {
             if (element.name === "") continue;
-            const field = new Field(element.name, Type.fromElement(element), { changeSet: this.changeSet, effectManager: this.effectManager });
-            const fieldElementLinker = new FieldElementLinker(field, element);
+            const name = element.name;
+            const type = Type.fromElement(element);
+            const field = new Field(name, type, { changeSet: this.changeSet, effectManager: this.effectManager });
+            const fieldElementLinker = new FieldElementLinker(field, type.wrap(element));
             fieldElementLinker.link();
             this.fieldLinkers.push(fieldElementLinker);
             this.fields.add(field);
