@@ -319,6 +319,7 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
     }
 
     mask(element: any): any {
+        element.type = "text";
         const mask = IMask(element, {
             mask: Number,
             scale: this._precision,
