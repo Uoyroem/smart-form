@@ -49,6 +49,7 @@
   "dependencies": {
     "@babel/runtime": "^7.27.0",
     "@babel/runtime-corejs3": "^7.27.0",
-    "core-js": "^3.41.0"
+    "core-js": "^3.41.0",
+    "imask": "^7.6.1"
   }
 }

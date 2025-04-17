@@ -1,4 +1,5 @@
-import { Field,  } from "./field";
+import { FieldChangesEvent } from "./change-set";
+import { Field } from "./field";
 
 export class Fields extends EventTarget {
     public list: Field[];
@@ -27,9 +28,8 @@ export class Fields extends EventTarget {
         return true;
     }
 
-    get(fieldName: string): Field | FieldArray {
-        const fields = this.list.filter(field => field.name === fieldName)
-        return fields.length === 1 ? fields[0] : new FieldArray(fields);
+    get(fieldName: string): Field[] {
+        return this.list.filter(field => field.name === fieldName);
     }
 
     [Symbol.iterator](): Iterator<string> {

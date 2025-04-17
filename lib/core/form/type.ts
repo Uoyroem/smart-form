@@ -5,53 +5,65 @@ export interface ElementType {
     asElementType(): string;
 }
 
+/**
+ * Element у который value это 1000 но пользователь видит 1 000 можно использовать библеотеку IMask
+ * 
+ */
+
 export class Type {
     static object() {
-        return new Object();
+        return new ObjectType();
     }
 
     static boolean() {
-        return new Boolean();
+        return new BooleanType();
     }
 
     static text() {
-        return new Text();
+        return new TextType();
     }
 
-    static file({ multiple = false } = {}) {
-        return new File().multiple(multiple);
+    static fileOne() {
+        return new FileOneType();
+    }
+    static fileMultiple() {
+        return new FileMultipleType();
     }
 
     static number() {
-        return new Number();
+        return new NumberType();
     }
 
     static date() {
-        return new Date();
+        return new DateType();
     }
 
     static month() {
-        return new Month();
+        return new MonthType();
     }
 
-    static select({ multiple = false } = {}) {
-        return new Select().multiple(multiple);
+    static selectOne() {
+        return new SelectOneType();
+    }
+
+    static selectMultiple() {
+        return new SelectOneType();
     }
 
     static checkbox() {
-        return new Checkbox();
+        return new CheckboxType();
     }
 
     static radio() {
-        return new Radio();
+        return new RadioType();
     }
 
     static fromElement(element: any): Type {
         switch (element.type) {
             case "select-one":
-                return this.select();
+                return this.selectOne();
             case "select-multiple":
-                return this.select().multiple();
+                return this.selectMultiple();
             case "number":
                 return this.number();
             case "text":
@@ -67,7 +79,7 @@ export class Type {
             case "month":
                 return this.month();
             case "file":
-                return this.file({ multiple: element.multiple });
+                return element.multiple ? this.fileMultiple() : this.fileOne();
             default:
                 throw new Error(`As element type ${element} not has`);
         }
@@ -79,31 +91,43 @@ export class Type {
         this.name = name;
     }
 
-    isSameType(otherType: Type): boolean { return this.name === otherType.name; }
+    async toJSON() { }
+    parse(value: any): any { }
 
-    isEqual(a: any, b: any): boolean { return a === b; }
-    isEmpty() { }
+    isSameType(otherType: Type): boolean { return this.name === otherType.name; }
+    isValuesEqual(a: any, b: any): boolean { return a === b; }
     asElementType() { return "hidden"; }
 }
 
-export class File extends Type implements ElementType {
-    private _multiple: boolean = false;
-
+export class FileOneType extends Type implements ElementType {
     constructor() {
-        super("File");
-    }
-
-    multiple(value: boolean = true): this {
-        this._multiple = value;
-        return this;
+        super("FileOne");
     }
 
     asElementType(): string {
         return "file";
     }
+
+    parse(value: File): string {
+        return value.name;
+    }
 }
 
-export class Text extends Type implements PrimitiveType, ElementType {
+export class FileMultipleType extends Type implements ElementType {
+    constructor() {
+        super("FileMultiple");
+    }
+
+    asElementType(): string {
+        return "file";
+    }
+
+    parse(value: File[]): string[] {
+        return value.map(value => value.name);
+    }
+}
+
+export class TextType extends Type implements PrimitiveType, ElementType {
     private _area: boolean;
 
     constructor() {
@@ -116,12 +140,16 @@ export class Text extends Type implements PrimitiveType, ElementType {
         return this;
     }
 
+    parse(value: string): string {
+        return value;
+    }
+
     asElementType(): string {
         return this._area ? "textarea" : "text";
     }
 }
 
-export class Number extends Type implements PrimitiveType, ElementType {
+export class NumberType extends Type implements PrimitiveType, ElementType {
     constructor() {
         super("Number");
     }
@@ -129,9 +157,13 @@ export class Number extends Type implements PrimitiveType, ElementType {
     asElementType(): string {
         return "number";
     }
+
+    parse(value: string): number {
+        return parseFloat(value);
+    }
 }
 
-export class Date extends Type implements PrimitiveType, ElementType {
+export class DateType extends Type implements PrimitiveType, ElementType {
     constructor() {
         super("Date");
     }
@@ -140,12 +172,16 @@ export class Date extends Type implements PrimitiveType, ElementType {
         return "date";
     }
 
-    isEqual(a: any, b: any): boolean {
+    isValuesEqual(a: any, b: any): boolean {
         return a === b;
+    }
+
+    parse(value: string): Date {
+        return new Date(value);
     }
 }
 
-export class Month extends Type implements PrimitiveType, ElementType {
+export class MonthType extends Type implements PrimitiveType, ElementType {
     constructor() {
         super("Month");
     }
@@ -154,18 +190,26 @@ export class Month extends Type implements PrimitiveType, ElementType {
         return "month";
     }
 
-    isEqual(a: any, b: any): boolean {
+    isValuesEqual(a: any, b: any): boolean {
         return a === b;
+    }
+
+    parse(value: string): Date {
+        return new Date(value);
     }
 }
 
-export class Boolean extends Type implements PrimitiveType {
+export class BooleanType extends Type implements PrimitiveType {
     constructor() {
         super("Boolean");
     }
+
+    parse(value: string): boolean {
+        return Boolean(value);
+    }
 }
 
-export class Radio extends Type implements ElementType {
+export class RadioType extends Type implements ElementType {
     constructor() {
         super("Radio");
     }
@@ -175,7 +219,7 @@ export class Radio extends Type implements ElementType {
     }
 }
 
-export class Checkbox extends Type implements ElementType {
+export class CheckboxType extends Type implements ElementType {
     constructor() {
         super("Checkbox");
     }
@@ -185,13 +229,11 @@ export class Checkbox extends Type implements ElementType {
     }
 }
 
-export class Select extends Type implements ElementType {
-    private _multiple: boolean;
+export class SelectOneType extends Type implements ElementType {
     private _of: Type;
 
     constructor() {
-        super("select");
-        this._multiple = false;
+        super("SelectOne");
         /**
          * @type {Type}
          */
@@ -199,26 +241,50 @@ export class Select extends Type implements ElementType {
     }
 
     asElementType(): string {
-        return this._multiple ? "select-multiple" : "select-one";
-    }
-
-    multiple(value: boolean = true): this {
-        this._multiple = value;
-        return this;
+        return "select-one";
     }
 
     of(type: Type): this {
         this._of = type;
         return this;
     }
+
+    parse(value: string): any {
+        return this._of.parse(value);
+    }
 }
 
-export class Object extends Type implements PrimitiveType {
+export class SelectMultipleType extends Type implements ElementType {
+    private _of: Type;
+
+    constructor() {
+        super("SelectMultiple");
+        /**
+         * @type {Type}
+         */
+        this._of = Type.text();
+    }
+
+    of(type: Type): this {
+        this._of = type;
+        return this;
+    }
+
+    asElementType(): string {
+        return "select-multiple";
+    }
+
+    parse(value: any[]): any[] {
+        return value.map(value => this._of.parse(value));
+    }
+}
+
+export class ObjectType extends Type implements PrimitiveType {
     constructor() {
         super("Object");
     }
 
-    isEqual(a: any, b: any): boolean {
+    isValuesEqual(a: any, b: any): boolean {
         return deepEqual(a, b);
     }
 }

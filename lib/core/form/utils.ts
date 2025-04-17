@@ -42,13 +42,13 @@ export function deepEqual(a: any, b: any): boolean {
     return true;
 }
 
-export function readFile(file: File) {
+export async function readFile(file: File) {
     return new Promise((resolve, reason) => {
         const reader = new FileReader();
         reader.onload = function () {
             const content = (reader.result as string | null)?.split(',')?.[1];
             if (content) {
-                resolve(content);
+                resolve({ name: file.name, type: file.type, content });
             }
         };
         reader.readAsDataURL(file);

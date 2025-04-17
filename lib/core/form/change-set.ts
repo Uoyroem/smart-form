@@ -40,7 +40,7 @@ export class ChangeSet {
 
     trimProcessedChanges() {
         while (this._changes.length > this._maxSize) {
-            const index = this._changes.findIndex(c => c.processed);
+            const index = this._changes.findIndex(change => change.processed);
             if (index === -1) break;
             this._changes.splice(index, 1);
         }

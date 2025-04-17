@@ -1,4 +1,5 @@
 import { ChangeSet } from "./change-set";
+import { DynamicFormData, FormData } from "./data";
 import { DataManager } from "./data-manager";
 import { EffectManager } from "./effect-manager";
 import { Field } from "./field";
@@ -86,6 +87,8 @@ type FocusAction = FocusActionClickElement | FocusActionCallback;
 
 export class Form extends EventTarget {
     public form: HTMLFormElement;
+    public readonly formData: FormData;
+
     public effectManager: EffectManager;
     public fields: Fields;
     public fieldLinkers: FieldLinker[];
@@ -102,6 +105,7 @@ export class Form extends EventTarget {
         this.fields = new Fields();
         this.fieldLinkers = [];
         this.focusActions = focusActions ?? [];
+        this.formData = new DynamicFormData(this);
     }
 
     async setup() {
@@ -166,7 +170,7 @@ export class Form extends EventTarget {
     registerElements(): void {
         for (const element of this.form.elements as any) {
             if (element.name === "") continue;
-            const field = new Field(element.name, Type.fromElement(element), { changeSet: this.changeSet, effectManager: this.effectManager });
+            const field = new Field(element.name, Type.fromElement(element), this);
             const fieldElementLinker = new FieldElementLinker(field, element);
             fieldElementLinker.link();
             this.fieldLinkers.push(fieldElementLinker);
@@ -190,7 +194,7 @@ export class Form extends EventTarget {
     }
 
     addField(fieldName: string, type: Type): void {
-        this.fields.add(new Field(fieldName, type, { changeSet: this.changeSet, effectManager: this.effectManager }));
+        this.fields.add(new Field(fieldName, type, this));
     }
 
     addDisableWhenEffect(fieldName: string, disableWhen: () => Promise<boolean> | boolean, dependsOn: string[]): void {

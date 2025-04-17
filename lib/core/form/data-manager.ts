@@ -1,5 +1,5 @@
 import { Form } from '.';
-import { FormElement_ as FormElement } from './element';
+import { Element } from './element';
 import { Field, FieldChange } from "./field";
 
 interface SetFieldValueRequest {
@@ -38,7 +38,7 @@ interface SetElementValueRequest {
     action: "set";
     entityType: "element";
     target: "value";
-    entity: FormElement;
+    entity: Element;
     newValue: any;
 }
 
@@ -46,7 +46,7 @@ interface SetElementMetaRequest {
     action: "set";
     entityType: "element";
     target: "meta-value";
-    entity: FormElement;
+    entity: Element;
     metaKey: string;
     newValue: any;
 }
@@ -55,14 +55,14 @@ interface GetElementValueRequest {
     action: "get";
     entityType: "element";
     target: "value";
-    entity: FormElement;
+    entity: Element;
 }
 
 interface GetElementMetaRequest {
     action: "get";
     entityType: "element";
     target: "meta-value";
-    entity: FormElement;
+    entity: Element;
     metaKey: string;
 }
 
@@ -137,4 +137,8 @@ export abstract class DataManager {
 export class DefaultDataManager extends DataManager {
     public access(request: FormAccessRequest): AccessResult { return { result: undefined, status: "error" }; }
     public handleChanges(changes: FieldChange[]): void { }
+}
+
+export class Controller {
+    
 }
