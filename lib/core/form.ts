@@ -334,8 +334,7 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
                     case "value":
                         return mask.unmaskedValue;
                     default:
-                        const value = Reflect.get(target, propertyKey, receiver);
-                        return typeof value === "function" ? value.bind(target) : value;
+                        return Reflect.get(target, propertyKey, receiver);
                 }
             },
             set(target, propertyKey, newValue, receiver) {
