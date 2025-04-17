@@ -45,17 +45,36 @@ export function deepEqual(a: any, b: any): boolean {
     return true;
 }
 
-export function readFile(file: File) {
+export interface JsonFile {
+    name: string;
+    type: string;
+    content: string;
+}
+
+export async function fileToJson(file: File): Promise<JsonFile> {
     return new Promise((resolve, reason) => {
         const reader = new FileReader();
         reader.onload = function () {
             const content = (reader.result as string | null)?.split(',')?.[1];
             if (content) {
-                resolve(content);
+                resolve({ name: file.name, type: file.type, content });
             }
         };
         reader.readAsDataURL(file);
     });
+}
+
+export function jsonToFile(json: JsonFile): File {
+    const binaryString = atob(json.content);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const blob = new Blob([bytes], { type: json.type });
+    return new File([blob], json.name, { type: json.type });
 }
 
 export function getMetaDependencyKey(fieldName: string, metaKey: string) {
