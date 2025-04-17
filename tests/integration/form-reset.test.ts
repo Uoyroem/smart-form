@@ -34,8 +34,8 @@ describe("Form.reset", () => {
 
   test("should reset all fields in the form", async () => {
     // Добавляем поля в форму
-    const field1 = new Uoyroem.FormField("field1", Uoyroem.FormType.text(), { effectManager });
-    const field2 = new Uoyroem.FormField("field2", Uoyroem.FormType.number(), { effectManager });
+    const field1 = new Uoyroem.Field("field1", Uoyroem.Type.text(), { effectManager });
+    const field2 = new Uoyroem.Field("field2", Uoyroem.Type.number(), { effectManager });
     form.fields.add(field1);
     form.fields.add(field2);
 
@@ -53,7 +53,7 @@ describe("Form.reset", () => {
 
   test("should pass initiator as the form instance to fields", async () => {
     // Добавляем одно поле
-    const field = new Uoyroem.FormField("field", Uoyroem.FormType.text(), { effectManager });
+    const field = new Uoyroem.Field("field", Uoyroem.Type.text(), { effectManager });
     form.fields.add(field);
 
     // Мокаем reset и проверяем аргументы
@@ -68,7 +68,7 @@ describe("Form.reset", () => {
 
   test("should trigger effects after resetting fields", async () => {
     // Добавляем поле
-    const field = new Uoyroem.FormField("field", Uoyroem.FormType.text(), { effectManager });
+    const field = new Uoyroem.Field("field", Uoyroem.Type.text(), { effectManager });
     form.fields.add(field);
 
     // Мокаем reset для поля
@@ -94,7 +94,7 @@ describe("Form.reset", () => {
 
   test("should reset field values to their initial values", async () => {
     // Создаем поле с начальным значением
-    const field = new Uoyroem.FormField("field", Uoyroem.FormType.text(), { effectManager });
+    const field = new Uoyroem.Field("field", Uoyroem.Type.text(), { effectManager });
     field.setInitialValue("initial");
     form.fields.add(field);
 
@@ -113,7 +113,7 @@ describe("Form.reset", () => {
 
   test("should reset field meta values to their initial values", async () => {
     // Создаем поле
-    const field = new Uoyroem.FormField("field", Uoyroem.FormType.text(), { effectManager });
+    const field = new Uoyroem.Field("field", Uoyroem.Type.text(), { effectManager });
     field.setInitialMetaValue("disabled", false, { resettable: true });
     form.fields.add(field);
 

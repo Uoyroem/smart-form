@@ -1,13 +1,13 @@
 import * as Uoyroem from "../../lib/index";
 
 
-describe('FormField + FormFieldChangeSet Integration', () => {
-    let field: Uoyroem.FormField;
-    let changeSet: Uoyroem.FormFieldChangeSet;
+describe('Field + ChangeSet Integration', () => {
+    let field: Uoyroem.Field;
+    let changeSet: Uoyroem.ChangeSet;
 
     beforeEach(() => {
-        changeSet = new Uoyroem.FormFieldChangeSet();
-        field = new Uoyroem.FormField('test', Uoyroem.FormType.text(), { changeSet });
+        changeSet = new Uoyroem.ChangeSet();
+        field = new Uoyroem.Field('test', Uoyroem.Type.text(), { changeSet });
     });
 
     it('should track value changes and mark as processed', () => {
@@ -15,7 +15,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('initial', { raw: true });
 
         // 2. Проверяем, что изменение есть в ChangeSet
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.Value });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.newValue).toBe("initial");
@@ -34,7 +34,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         const changedNames = field.setMetaValue('disabled', true, { raw: true });
         expect(changedNames).toEqual(new Set(['test:disabled']));
 
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.MetaValue });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FieldChangeType.MetaValue });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.metaKey).toBe('disabled');
@@ -46,7 +46,7 @@ describe('FormField + FormFieldChangeSet Integration', () => {
         field.setValue('second', { raw: true });
 
         // 2. Получаем ТОЛЬКО последнее изменение
-        const change = changeSet.getFieldChange(field, { type: Uoyroem.FormFieldChangeType.Value });
+        const change = changeSet.getFieldChange(field, { type: Uoyroem.FieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.newValue).toBe("second");

@@ -1,38 +1,38 @@
 import * as Uoyroem from "../../lib/index";
 
-describe('FormField', () => {
-    let formField: Uoyroem.FormField;
+describe('Field', () => {
+    let field: Uoyroem.Field;
 
-    // Перед каждым тестом создаем новый экземпляр FormField с типом text
+    // Перед каждым тестом создаем новый экземпляр Field с типом text
     beforeEach(() => {
-        const textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        const textType = Uoyroem.Type.text();
+        field = new Uoyroem.Field('testField', textType);
     });
 
     // Тесты для getValue
     describe('getValue', () => {
         it('should return null by default', () => {
-            const value = formField.getValue();
+            const value = field.getValue();
             expect(value).toBeNull();
         });
 
         it('should return raw value when raw is true', () => {
-            formField.setValue('rawValue', { raw: true });
-            const value = formField.getValue({ raw: true });
+            field.setValue('rawValue', { raw: true });
+            const value = field.getValue({ raw: true });
             expect(value).toBe('rawValue');
         });
 
         it('should return null if disabled and disabledIsNull is true', () => {
-            formField.setMetaValue('disabled', true, { raw: true });
-            formField.setValue('someValue', { raw: true });
-            const value = formField.getValue({ disabledIsNull: true });
+            field.setMetaValue('disabled', true, { raw: true });
+            field.setValue('someValue', { raw: true });
+            const value = field.getValue({ disabledIsNull: true });
             expect(value).toBeNull();
         });
 
         it('should return value if disabled but disabledIsNull is false', () => {
-            formField.setMetaValue('disabled', true, { raw: true });
-            formField.setValue('someValue', { raw: true });
-            const value = formField.getValue({ disabledIsNull: false });
+            field.setMetaValue('disabled', true, { raw: true });
+            field.setValue('someValue', { raw: true });
+            const value = field.getValue({ disabledIsNull: false });
             expect(value).toBe('someValue');
         });
     });
@@ -40,42 +40,42 @@ describe('FormField', () => {
     // Тесты для setValue
     describe('setValue', () => {
         it('should set value and return changed names', () => {
-            const changedNames = formField.setValue('newValue');
+            const changedNames = field.setValue('newValue');
             expect(changedNames).toBeInstanceOf(Set);
             expect(changedNames.has('testField')).toBe(true);
-            expect(formField.getValue()).toBe('newValue');
+            expect(field.getValue()).toBe('newValue');
         });
 
         it('should not trigger changes if value is the same', () => {
-            formField.setValue('sameValue', { raw: true });
-            const changedNames = formField.setValue('sameValue', { raw: true });
+            field.setValue('sameValue', { raw: true });
+            const changedNames = field.setValue('sameValue', { raw: true });
             expect(changedNames.size).toBe(0);
         });
 
         it('should process changes when processChanges is true', () => {
             const listener = jest.fn();
-            formField.addEventListener('changes', listener);
-            formField.setValue('processedValue', { processChanges: true });
+            field.addEventListener('changes', listener);
+            field.setValue('processedValue', { processChanges: true });
             expect(listener).toHaveBeenCalled();
-            expect(formField.getValue()).toBe('processedValue');
+            expect(field.getValue()).toBe('processedValue');
         });
     });
 
     // Тесты для getMetaValue
     describe('getMetaValue', () => {
         it('should return default meta value (false) for disabled', () => {
-            const disabled = formField.getMetaValue('disabled');
+            const disabled = field.getMetaValue('disabled');
             expect(disabled).toBe(false);
         });
 
         it('should return null for uninitialized meta key when raw', () => {
-            const value = formField.getMetaValue('unknownKey', { raw: true });
+            const value = field.getMetaValue('unknownKey', { raw: true });
             expect(value).toBeUndefined();
         });
 
         it('should return set meta value', () => {
-            formField.setMetaValue('customKey', 'customValue', { raw: true });
-            const value = formField.getMetaValue('customKey');
+            field.setMetaValue('customKey', 'customValue', { raw: true });
+            const value = field.getMetaValue('customKey');
             expect(value).toBe('customValue');
         });
     });
@@ -83,96 +83,96 @@ describe('FormField', () => {
     // Тесты для setMetaValue
     describe('setMetaValue', () => {
         it('should set meta value and return changed names', () => {
-            const changedNames = formField.setMetaValue('testMeta', 'metaValue');
+            const changedNames = field.setMetaValue('testMeta', 'metaValue');
             expect(changedNames).toBeInstanceOf(Set);
             expect(changedNames.has('testField:testMeta')).toBe(true);
-            expect(formField.getMetaValue('testMeta')).toBe('metaValue');
+            expect(field.getMetaValue('testMeta')).toBe('metaValue');
         });
 
         it('should not trigger changes if meta value is the same', () => {
-            formField.setMetaValue('testMeta', 'sameValue', { raw: true });
-            const changedNames = formField.setMetaValue('testMeta', 'sameValue', { raw: true });
+            field.setMetaValue('testMeta', 'sameValue', { raw: true });
+            const changedNames = field.setMetaValue('testMeta', 'sameValue', { raw: true });
             expect(changedNames.size).toBe(0);
         });
 
         it('should process changes when processChanges is true', () => {
             const listener = jest.fn();
-            formField.addEventListener('changes', listener);
-            formField.setMetaValue('testMeta', 'processedValue', { processChanges: true });
+            field.addEventListener('changes', listener);
+            field.setMetaValue('testMeta', 'processedValue', { processChanges: true });
             expect(listener).toHaveBeenCalled();
-            expect(formField.getMetaValue('testMeta')).toBe('processedValue');
+            expect(field.getMetaValue('testMeta')).toBe('processedValue');
         });
     });
 });
 
-// Описываем тесты для метода FormField.getAdapter
-describe('FormField.getAdapter', () => {
-    let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormType;
+// Описываем тесты для метода Field.getAdapter
+describe('Field.getAdapter', () => {
+    let field: Uoyroem.Field;
+    let textType: Uoyroem.Type;
 
-    // Перед каждым тестом создаем новый экземпляр FormField с типом text
+    // Перед каждым тестом создаем новый экземпляр Field с типом text
     beforeEach(() => {
-        textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        textType = Uoyroem.Type.text();
+        field = new Uoyroem.Field('testField', textType);
     });
 
     // Тесты для getAdapter
     describe('getAdapter behavior', () => {
         it('should return a proxy with access to self', () => {
-            const adapter = formField.getAdapter({});
-            expect(adapter.self).toBe(formField);
+            const adapter = field.getAdapter({});
+            expect(adapter.self).toBe(field);
         });
 
         it('should reflect the provided context', () => {
-            const context: Uoyroem.FormFieldContext = {
+            const context: Uoyroem.FieldContext = {
                 stateKey: 'customState',
                 initiator: 'testInitiator',
                 processChanges: true,
                 disabledIsNull: false,
                 raw: true,
             };
-            const adapter = formField.getAdapter(context);
+            const adapter = field.getAdapter(context);
             expect(adapter.context).toEqual(context);
         });
 
         it('should override getValue with context', () => {
-            formField.setValue('initialValue', { raw: true });
-            formField.setMetaValue('disabled', true, { raw: true });
+            field.setValue('initialValue', { raw: true });
+            field.setMetaValue('disabled', true, { raw: true });
 
-            const adapter = formField.getAdapter({ disabledIsNull: false });
+            const adapter = field.getAdapter({ disabledIsNull: false });
             const value = adapter.getValue();
             expect(value).toBe('initialValue'); // disabledIsNull=false игнорирует disabled
         });
 
         it('should override setValue with context', () => {
-            const adapter = formField.getAdapter({ processChanges: true });
+            const adapter = field.getAdapter({ processChanges: true });
             const listener = jest.fn();
-            formField.addEventListener('changes', listener);
+            field.addEventListener('changes', listener);
 
             adapter.setValue('newValue');
-            expect(formField.getValue()).toBe('newValue');
+            expect(field.getValue()).toBe('newValue');
             expect(listener).toHaveBeenCalled(); // processChanges=true вызывает событие
         });
 
         it('should override getMetaValue with context', () => {
-            formField.setMetaValue('testMeta', 'metaValue', { raw: true });
-            const adapter = formField.getAdapter({ raw: true });
+            field.setMetaValue('testMeta', 'metaValue', { raw: true });
+            const adapter = field.getAdapter({ raw: true });
             const metaValue = adapter.getMetaValue('testMeta');
             expect(metaValue).toBe('metaValue');
         });
 
         it('should override setMetaValue with context', () => {
-            const adapter = formField.getAdapter({ processChanges: true });
+            const adapter = field.getAdapter({ processChanges: true });
             const listener = jest.fn();
-            formField.addEventListener('changes', listener);
+            field.addEventListener('changes', listener);
 
             adapter.setMetaValue('testMeta', 'newMetaValue');
-            expect(formField.getMetaValue('testMeta')).toBe('newMetaValue');
+            expect(field.getMetaValue('testMeta')).toBe('newMetaValue');
             expect(listener).toHaveBeenCalled(); // processChanges=true вызывает событие
         });
 
         it('should allow nested context overrides', () => {
-            const outerAdapter = formField.getAdapter({ stateKey: 'outerState', disabledIsNull: true });
+            const outerAdapter = field.getAdapter({ stateKey: 'outerState', disabledIsNull: true });
             const innerAdapter = outerAdapter.getAdapter({ disabledIsNull: false });
             innerAdapter.reset({ stateKey: "outerState" });
             // Устанавливаем значение с учетом stateKey из outerAdapter
@@ -184,15 +184,15 @@ describe('FormField.getAdapter', () => {
             expect(innerAdapter.getValue()).toBe('testValue'); // disabledIsNull=false игнорирует disabled
         });
 
-        it('should bind methods to the original FormField instance', () => {
-            const adapter = formField.getAdapter({});
+        it('should bind methods to the original Field instance', () => {
+            const adapter = field.getAdapter({});
             const resetMethod = adapter.reset;
             resetMethod(); // Вызываем без привязки контекста
-            expect(formField.getValue()).toBeNull(); // reset должен сработать корректно
+            expect(field.getValue()).toBeNull(); // reset должен сработать корректно
         });
 
         it('should handle property access correctly', () => {
-            const adapter = formField.getAdapter({});
+            const adapter = field.getAdapter({});
             expect(adapter.name).toBe('testField');
             expect(adapter.type).toBe(textType);
         });
@@ -200,13 +200,13 @@ describe('FormField.getAdapter', () => {
 });
 
 
-describe('FormField switchState', () => {
-    let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormType;
+describe('Field switchState', () => {
+    let formField: Uoyroem.Field;
+    let textType: Uoyroem.Type;
 
     beforeEach(() => {
-        textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        textType = Uoyroem.Type.text();
+        formField = new Uoyroem.Field('testField', textType);
     });
 
     afterEach(() => {
@@ -238,7 +238,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -252,7 +252,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.MetaValue, metaKey: "disabled" });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.MetaValue, metaKey: "disabled" });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -283,8 +283,8 @@ describe('FormField switchState', () => {
         formField.switchState({ stateKey: 'state1', processChanges: true });
 
         expect(processChangesSpy).toHaveBeenCalled();
-        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.FormFieldChangesEvent));
-        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.FormFieldChange) => change.field.name === "testField")).toBeTruthy();
+        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.FieldChangesEvent));
+        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.FieldChange) => change.field.name === "testField")).toBeTruthy();
     });
 
     it('should return changed names with dry processing when processChanges', () => {
@@ -304,13 +304,13 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1', initiator: 'testInitiator' });
 
-        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value })!;
+        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.Value })!;
         expect(valueChange.initiator).toBe('testInitiator');
     });
 });
 
 describe('Form select one field', () => {
-    let field: Uoyroem.FormField;
+    let field: Uoyroem.Field;
     const defaultOptions = [
         {
             textContent: "Алматы",
@@ -327,7 +327,7 @@ describe('Form select one field', () => {
         },
     ];
     beforeEach(() => {
-        field = new Uoyroem.FormField("city", Uoyroem.FormType.select());
+        field = new Uoyroem.Field("city", Uoyroem.Type.select());
         field.setMetaValue("options", defaultOptions, { processChanges: true });
     });
 
@@ -348,7 +348,7 @@ describe('Form select one field', () => {
 });
 
 describe('Form select multiple field', () => {
-    let field: Uoyroem.FormField;
+    let field: Uoyroem.Field;
     const defaultOptions = [
         {
             textContent: "John",
@@ -365,7 +365,7 @@ describe('Form select multiple field', () => {
         },
     ];
     beforeEach(() => {
-        field = new Uoyroem.FormField("user", Uoyroem.FormType.select({ multiple: true }));
+        field = new Uoyroem.Field("user", Uoyroem.Type.select({ multiple: true }));
         field.setValue([], { processChanges: true });
         field.setMetaValue("options", defaultOptions, { processChanges: true });
     });

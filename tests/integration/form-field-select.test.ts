@@ -10,10 +10,10 @@ jest.mock("../../lib/index", () => ({
     })),
 }));
 
-describe("FormField with FormTypeSelect and FormFieldElementLinker", () => {
+describe("Field with TypeSelect and FieldElementLinker", () => {
     let selectElement: HTMLSelectElement;
-    let field: Uoyroem.FormField;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let field: Uoyroem.Field;
+    let linker: Uoyroem.FieldElementLinker;
     let effectManager: jest.Mocked<Uoyroem.EffectManager>;
 
     beforeEach(() => {
@@ -36,19 +36,19 @@ describe("FormField with FormTypeSelect and FormFieldElementLinker", () => {
         effectManager.addDependency.mockClear();
 
         // Создаем поле с типом select
-        field = new Uoyroem.FormField("test-select", Uoyroem.FormType.select(), {
+        field = new Uoyroem.Field("test-select", Uoyroem.Type.select(), {
             effectManager,
         });
 
         // Создаем linker
-        linker = new Uoyroem.FormFieldElementLinker(field, selectElement);
+        linker = new Uoyroem.FieldElementLinker(field, selectElement);
     });
 
     afterEach(() => {
         jest.clearAllMocks();
     });
 
-    test("should initialize FormField with select options from DOM", () => {
+    test("should initialize Field with select options from DOM", () => {
         // Привязываем элемент
         linker.link();
 
@@ -82,10 +82,10 @@ describe("FormField with FormTypeSelect and FormFieldElementLinker", () => {
         // Меняем на multiple select
         selectElement.multiple = true;
         selectElement.options[0].selected = false;
-        field = new Uoyroem.FormField("test-select", Uoyroem.FormType.select({ multiple: true }), {
+        field = new Uoyroem.Field("test-select", Uoyroem.Type.select({ multiple: true }), {
             effectManager,
         });
-        linker = new Uoyroem.FormFieldElementLinker(field, selectElement);
+        linker = new Uoyroem.FieldElementLinker(field, selectElement);
         linker.link();
 
         // Устанавливаем значения
