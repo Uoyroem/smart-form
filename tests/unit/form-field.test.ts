@@ -1,12 +1,12 @@
 import * as Uoyroem from "../../lib/index";
 
-describe('FormField', () => {
-    let formField: Uoyroem.FormField;
+describe('Field', () => {
+    let formField: Uoyroem.Field;
 
-    // Перед каждым тестом создаем новый экземпляр FormField с типом text
+    // Перед каждым тестом создаем новый экземпляр Field с типом text
     beforeEach(() => {
-        const textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        const textType = Uoyroem.Type.text();
+        formField = new Uoyroem.Field('testField', textType);
     });
 
     // Тесты для getValue
@@ -105,15 +105,15 @@ describe('FormField', () => {
     });
 });
 
-// Описываем тесты для метода FormField.getAdapter
-describe('FormField.getAdapter', () => {
-    let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormType;
+// Описываем тесты для метода Field.getAdapter
+describe('Field.getAdapter', () => {
+    let formField: Uoyroem.Field;
+    let textType: Uoyroem.Type;
 
-    // Перед каждым тестом создаем новый экземпляр FormField с типом text
+    // Перед каждым тестом создаем новый экземпляр Field с типом text
     beforeEach(() => {
-        textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        textType = Uoyroem.Type.text();
+        formField = new Uoyroem.Field('testField', textType);
     });
 
     // Тесты для getAdapter
@@ -124,7 +124,7 @@ describe('FormField.getAdapter', () => {
         });
 
         it('should reflect the provided context', () => {
-            const context: Uoyroem.FormFieldContext = {
+            const context: Uoyroem.FieldContext = {
                 stateKey: 'customState',
                 initiator: 'testInitiator',
                 processChanges: true,
@@ -184,7 +184,7 @@ describe('FormField.getAdapter', () => {
             expect(innerAdapter.getValue()).toBe('testValue'); // disabledIsNull=false игнорирует disabled
         });
 
-        it('should bind methods to the original FormField instance', () => {
+        it('should bind methods to the original Field instance', () => {
             const adapter = formField.getAdapter({});
             const resetMethod = adapter.reset;
             resetMethod(); // Вызываем без привязки контекста
@@ -200,13 +200,13 @@ describe('FormField.getAdapter', () => {
 });
 
 
-describe('FormField switchState', () => {
-    let formField: Uoyroem.FormField;
-    let textType: Uoyroem.FormType;
+describe('Field switchState', () => {
+    let formField: Uoyroem.Field;
+    let textType: Uoyroem.Type;
 
     beforeEach(() => {
-        textType = Uoyroem.FormType.text();
-        formField = new Uoyroem.FormField('testField', textType);
+        textType = Uoyroem.Type.text();
+        formField = new Uoyroem.Field('testField', textType);
     });
 
     afterEach(() => {
@@ -238,7 +238,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.Value });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -252,7 +252,7 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1' });
 
-        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.MetaValue, metaKey: "disabled" });
+        const change = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.MetaValue, metaKey: "disabled" });
         expect(change).not.toBeUndefined();
         if (change === undefined) return;
         expect(change.stateKey).toBe("state1");
@@ -283,8 +283,8 @@ describe('FormField switchState', () => {
         formField.switchState({ stateKey: 'state1', processChanges: true });
 
         expect(processChangesSpy).toHaveBeenCalled();
-        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.FormFieldChangesEvent));
-        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.FormFieldChange) => change.field.name === "testField")).toBeTruthy();
+        expect(listener).toHaveBeenCalledWith(expect.any(Uoyroem.FieldChangesEvent));
+        expect(listener.mock.calls[0][0].changes.find((change: Uoyroem.FieldChange) => change.field.name === "testField")).toBeTruthy();
     });
 
     it('should return changed names with dry processing when processChanges', () => {
@@ -304,13 +304,13 @@ describe('FormField switchState', () => {
 
         formField.switchState({ stateKey: 'state1', initiator: 'testInitiator' });
 
-        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FormFieldChangeType.Value })!;
+        const valueChange = formField.changeSet.getFieldChange(formField, { type: Uoyroem.FieldChangeType.Value })!;
         expect(valueChange.initiator).toBe('testInitiator');
     });
 });
 
 describe('Form select one field', () => {
-    let field: Uoyroem.FormField;
+    let field: Uoyroem.Field;
     const defaultOptions = [
         {
             textContent: "Алматы",
@@ -327,7 +327,7 @@ describe('Form select one field', () => {
         },
     ];
     beforeEach(() => {
-        field = new Uoyroem.FormField("city", Uoyroem.FormType.select());
+        field = new Uoyroem.Field("city", Uoyroem.Type.select());
         field.setMetaValue("options", defaultOptions, { processChanges: true });
     });
 
@@ -348,7 +348,7 @@ describe('Form select one field', () => {
 });
 
 describe('Form select multiple field', () => {
-    let field: Uoyroem.FormField;
+    let field: Uoyroem.Field;
     const defaultOptions = [
         {
             textContent: "John",
@@ -365,7 +365,7 @@ describe('Form select multiple field', () => {
         },
     ];
     beforeEach(() => {
-        field = new Uoyroem.FormField("user", Uoyroem.FormType.select({ multiple: true }));
+        field = new Uoyroem.Field("user", Uoyroem.Type.select({ multiple: true }));
         field.setValue([], { processChanges: true });
         field.setMetaValue("options", defaultOptions, { processChanges: true });
     });

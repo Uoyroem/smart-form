@@ -3,18 +3,18 @@ import * as Uoyroem from "../../lib/index";
 
 describe("Form with Radio Buttons", () => {
   let form: Uoyroem.Form;
-  let maleRadioField: Uoyroem.FormField;
-  let femaleRadioField: Uoyroem.FormField;
+  let maleRadioField: Uoyroem.Field;
+  let femaleRadioField: Uoyroem.Field;
 
   beforeEach(async () => {
     form = new Uoyroem.Form({ form: document.createElement("form") });
     await form.setup();
 
-    maleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    maleRadioField = new Uoyroem.Field("gender", Uoyroem.Type.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
     maleRadioField.setValue("male", { raw: true, processChanges: true });
     form.fields.add(maleRadioField);
 
-    femaleRadioField = new Uoyroem.FormField("gender", Uoyroem.FormType.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
+    femaleRadioField = new Uoyroem.Field("gender", Uoyroem.Type.radio(), { changeSet: form.changeSet, effectManager: form.effectManager });
     femaleRadioField.setValue("female", { raw: true, processChanges: true });
     form.fields.add(femaleRadioField);
   });

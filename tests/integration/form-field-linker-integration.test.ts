@@ -1,23 +1,23 @@
 import * as Uoyroem from "../../lib/index";
 
 
-describe('FormFieldElementLinker', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker', () => {
+    let formField: Uoyroem.Field;
     let inputElement: HTMLInputElement;
     let inputElementContainer: HTMLElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     it('should throw error if types do not match', () => {
-        const field = new Uoyroem.FormField("mismatch", Uoyroem.FormType.text());
+        const field = new Uoyroem.Field("mismatch", Uoyroem.Type.text());
         const selectElement = document.createElement("select");
         selectElement.name = "mismatch";
 
-        expect(() => new Uoyroem.FormFieldElementLinker(field, selectElement)).toThrow();
+        expect(() => new Uoyroem.FieldElementLinker(field, selectElement)).toThrow();
     });
 
     beforeEach(() => {
         // Создаём текстовое поле и input
-        formField = new Uoyroem.FormField("username", Uoyroem.FormType.text());
+        formField = new Uoyroem.Field("username", Uoyroem.Type.text());
         document.body.innerHTML = `
             <div>
                 <input id="username-input" type="text" name="username"/>
@@ -25,7 +25,7 @@ describe('FormFieldElementLinker', () => {
         `;
         inputElement = document.getElementById("username-input") as HTMLInputElement;
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, inputElement);
+        linker = new Uoyroem.FieldElementLinker(formField, inputElement);
     });
 
     it('should link field to element and sync initial value', () => {
@@ -33,14 +33,14 @@ describe('FormFieldElementLinker', () => {
         inputElement.value = "test-user";
         linker.link();
 
-        // Проверяем, что значение синхронизировалось в FormField
+        // Проверяем, что значение синхронизировалось в Field
         expect(formField.getValue({ raw: true })).toBe("test-user");
     });
 
     it('should sync value from field to element', () => {
         linker.link();
 
-        // Меняем значение в FormField
+        // Меняем значение в Field
         formField.setValue("new-value", { raw: true, processChanges: true });
 
         // Проверяем, что элемент обновился
@@ -54,7 +54,7 @@ describe('FormFieldElementLinker', () => {
         inputElement.value = "user-typed";
         inputElement.dispatchEvent(new InputEvent("input"));
 
-        // Проверяем, что FormField получил новое значение
+        // Проверяем, что Field получил новое значение
         expect(formField.getValue({ raw: true })).toBe("user-typed");
     });
 
@@ -72,7 +72,7 @@ describe('FormFieldElementLinker', () => {
         linker.link();
         linker.unlink();
 
-        // Меняем значение в FormField
+        // Меняем значение в Field
         formField.setValue("should-not-sync", { raw: true, processChanges: true });
 
         // Проверяем, что элемент НЕ обновился
@@ -90,19 +90,19 @@ describe('FormFieldElementLinker', () => {
     });
 });
 
-describe('FormFieldElementLinker (Radio)', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker (Radio)', () => {
+    let formField: Uoyroem.Field;
     let radioElement: HTMLInputElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     beforeEach(() => {
-        formField = new Uoyroem.FormField("gender", Uoyroem.FormType.radio());
+        formField = new Uoyroem.Field("gender", Uoyroem.Type.radio());
         radioElement = document.createElement("input");
         radioElement.type = "radio";
         radioElement.name = "gender";
         radioElement.value = "male";
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, radioElement);
+        linker = new Uoyroem.FieldElementLinker(formField, radioElement);
         linker.link();
     });
 
@@ -133,18 +133,18 @@ describe('FormFieldElementLinker (Radio)', () => {
     });
 });
 
-describe('FormFieldElementLinker (Checkbox)', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker (Checkbox)', () => {
+    let formField: Uoyroem.Field;
     let checkboxElement: HTMLInputElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     beforeEach(() => {
-        formField = new Uoyroem.FormField("agree", Uoyroem.FormType.checkbox());
+        formField = new Uoyroem.Field("agree", Uoyroem.Type.checkbox());
         checkboxElement = document.createElement("input");
         checkboxElement.type = "checkbox";
         checkboxElement.name = "agree";
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, checkboxElement);
+        linker = new Uoyroem.FieldElementLinker(formField, checkboxElement);
         linker.link();
     });
 
@@ -165,13 +165,13 @@ describe('FormFieldElementLinker (Checkbox)', () => {
     });
 });
 
-describe('FormFieldElementLinker (Select)', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker (Select)', () => {
+    let formField: Uoyroem.Field;
     let selectElement: HTMLSelectElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     beforeEach(() => {
-        formField = new Uoyroem.FormField("country", Uoyroem.FormType.select());
+        formField = new Uoyroem.Field("country", Uoyroem.Type.select());
         selectElement = document.createElement("select");
         selectElement.name = "country";
 
@@ -186,7 +186,7 @@ describe('FormFieldElementLinker (Select)', () => {
         option2.textContent = "USA";
         selectElement.appendChild(option2);
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
+        linker = new Uoyroem.FieldElementLinker(formField, selectElement);
         linker.link();
     });
 
@@ -198,13 +198,13 @@ describe('FormFieldElementLinker (Select)', () => {
     });
 });
 
-describe('FormFieldElementLinker (Select Multiple)', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker (Select Multiple)', () => {
+    let formField: Uoyroem.Field;
     let selectElement: HTMLSelectElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     beforeEach(() => {
-        formField = new Uoyroem.FormField("fruits", Uoyroem.FormType.select({ multiple: true }));
+        formField = new Uoyroem.Field("fruits", Uoyroem.Type.select({ multiple: true }));
         selectElement = document.createElement("select");
         selectElement.name = "fruits";
         selectElement.multiple = true;
@@ -216,7 +216,7 @@ describe('FormFieldElementLinker (Select Multiple)', () => {
             selectElement.appendChild(option);
         });
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, selectElement);
+        linker = new Uoyroem.FieldElementLinker(formField, selectElement);
         linker.link();
     });
 
@@ -237,18 +237,18 @@ describe('FormFieldElementLinker (Select Multiple)', () => {
     });
 });
 
-describe('FormFieldElementLinker (Number)', () => {
-    let formField: Uoyroem.FormField;
+describe('FieldElementLinker (Number)', () => {
+    let formField: Uoyroem.Field;
     let numberElement: HTMLInputElement;
-    let linker: Uoyroem.FormFieldElementLinker;
+    let linker: Uoyroem.FieldElementLinker;
 
     beforeEach(() => {
-        formField = new Uoyroem.FormField("age", Uoyroem.FormType.number());
+        formField = new Uoyroem.Field("age", Uoyroem.Type.number());
         numberElement = document.createElement("input");
         numberElement.type = "number";
         numberElement.name = "age";
 
-        linker = new Uoyroem.FormFieldElementLinker(formField, numberElement);
+        linker = new Uoyroem.FieldElementLinker(formField, numberElement);
         linker.link();
     });
 
