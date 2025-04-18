@@ -1,3 +1,3 @@
-import "./lib/styles";
+import "./lib/styles/index.scss";
 export * from "./lib";
 

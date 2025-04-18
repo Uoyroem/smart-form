@@ -14,7 +14,7 @@ const commonConfig = {
     ],
   },
   resolve: {
-    extensions: ['.ts', '.js', '.scss'],
+    extensions: ['.ts', '.js'],
   },
   output: {
     filename: 'smart-system.bundle.min.js',
