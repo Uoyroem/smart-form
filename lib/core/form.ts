@@ -365,7 +365,7 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
     }
 
     max(value?: number): this {
-        this._min = value;
+        this._max = value;
         return this;
     }
 
