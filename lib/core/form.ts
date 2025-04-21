@@ -1466,6 +1466,7 @@ export class Form extends EventTarget {
         for (const fieldName of this.fields) {
             if (!(fieldName in formData)) continue;
             this.fields.get(fieldName).setValue(formData[fieldName], { initiator: this, processChanges: true });
+            this.fields.get(fieldName).setMetaValue("dirty", { initiator: this, processChanges: true });
         }
         this.effectManager.triggerEffects();
     }

@@ -1,3 +1,0 @@
-.ss-form [data-visible=true]{transform:translateX(0);opacity:1;transition:transform .3s ease,opacity .3s ease}.ss-form [data-visible=false]{transform:translateX(100%);opacity:0;transition:transform .3s ease,opacity .3s ease}.ss-form .autofill{outline:dashed blue}.ss-table{display:flex;flex-direction:column;background-color:#e1e1e1}.ss-table-headers{display:flex}.ss-table-header-column{padding:.75em 1.5em;flex:0 0 101px}.ss-table-cell{border:2px solid #000}.ss-table-cell+.ss-table-cell{border-left:none}.ss-table-header-columns{display:flex;flex:auto}.ss-table-row{display:flex}
-
-/*# sourceMappingURL=smart-system.min.css.map*/
