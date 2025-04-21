@@ -327,6 +327,7 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
             normalizeZeros: true,
             min: this._min,
             max: this._max,
+            autofix: true
         });
         return new Proxy(element, {
             get(target, propertyKey, receiver) {
