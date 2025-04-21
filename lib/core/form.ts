@@ -151,12 +151,12 @@ export class Type {
             case "select-multiple":
                 return this.select().multiple();
             case "number":
+                let min = parseFloat(element.min);
                 let max = parseFloat(element.max);
-                let min = parseFloat(element.max);
                 let masked = element.dataset.masked === "true";
                 return this.number({
-                    max: Number.isNaN(max) ? undefined : max,
                     min: Number.isNaN(min) ? undefined : min,
+                    max: Number.isNaN(max) ? undefined : max,
                     masked
                 });
             case "text":
