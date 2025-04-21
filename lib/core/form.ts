@@ -345,7 +345,7 @@ export class NumberType extends Type implements ElementMaskableType, PrimitiveTy
             set(target, propertyKey, newValue, receiver) {
                 switch (propertyKey) {
                     case "value":
-                        mask.unmaskedValue = newValue;
+                        mask.unmaskedValue = `${newValue ?? ""}`;
                         return true;
                     default:
                         element[propertyKey] = newValue;
@@ -1383,6 +1383,7 @@ type FocusAction = FocusActionClickElement | FocusActionCallback;
 
 export class Form extends EventTarget {
     public form: HTMLFormElement;
+    public fieldsets: Record<string, HTMLFieldSetElement>;
     public effectManager: EffectManager;
     public fields: Fields;
     public fieldLinkers: FieldLinker[];
@@ -1397,8 +1398,10 @@ export class Form extends EventTarget {
         this.effectManager = new EffectManager();
         this.fields = new Fields();
         this.fieldLinkers = [];
+        this.fieldsets = {};
         this.focusActions = focusActions ?? [];
         this._changesManagers = [];
+
         this._handleChanges = this._handleChanges.bind(this);
     }
 
