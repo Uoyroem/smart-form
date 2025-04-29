@@ -3,8 +3,9 @@ import IMask from "imask";
 import log from "loglevel";
 export { EffectManager };
 
+const logger = log.getLogger("smart-system:form");
 if (process.env.NODE_ENV === "production") {
-    log.setLevel("silent");
+    logger.setLevel("silent");
 }
 
 export function isVisible(element: HTMLElement) {
@@ -849,7 +850,7 @@ export class Field extends EventTarget {
 
     reset({ stateKey = null, initiator = null, processChanges = false, full = false }: FieldContext & { full?: boolean } = {}): Set<string> {
         stateKey ??= this._currentStateKey;
-        log.log("[Field.reset] Reset state `%s` for field `%s`", stateKey, this.name);
+        logger.log("[Field.reset] Reset state `%s` for field `%s`", stateKey, this.name);
         if (full) {
             this._metaMap.set(stateKey, new Map());
         }
@@ -863,19 +864,19 @@ export class Field extends EventTarget {
 
     initializeState({ stateKey, initiator = null }: FieldContext & { stateKey: string }): void {
         if (!this._initializedStateKeys.has(stateKey)) {
-            log.log("[Field.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
+            logger.log("[Field.initializeState] Initializing state key `%s` for field `%s`", stateKey, this.name);
             this._initializedStateKeys.add(stateKey);
             this.reset({ stateKey, initiator, processChanges: true, full: true });
         }
     }
 
     switchState({ stateKey, initiator = null, processChanges = false }: FieldContext & { stateKey: string }): Set<string> {
-        log.log("[Field.switchState] Switching state for field `%s` from `%s` to `%s`", this.name, this._currentStateKey, stateKey);
+        logger.log("[Field.switchState] Switching state for field `%s` from `%s` to `%s`", this.name, this._currentStateKey, stateKey);
         this.initializeState({ stateKey, initiator });
         for (const [metaKey, newValue] of this._metaMap.get(stateKey)!.entries()) {
             const oldValue = this._metaMap.get(this._currentStateKey)!.get(metaKey);
             if (!deepEqual(oldValue, newValue)) {
-                log.log("[Field.switchState] Field meta value %s has change between stages", getMetaDependencyKey(this.name, metaKey));
+                logger.log("[Field.switchState] Field meta value %s has change between stages", getMetaDependencyKey(this.name, metaKey));
                 const change: FieldChange = {
                     stateKey,
                     type: FieldChangeType.MetaValue,
@@ -894,7 +895,7 @@ export class Field extends EventTarget {
         const oldValue = this._valueMap.get(this._currentStateKey);
         const newValue = this._valueMap.get(stateKey);
         if (!this.type.isValuesEqual(oldValue, newValue)) {
-            log.log("[Field.switchState] Field value %s has change between stages", this.name)
+            logger.log("[Field.switchState] Field value %s has change between stages", this.name)
             const change: FieldChange = {
                 stateKey,
                 type: FieldChangeType.Value,
@@ -990,7 +991,7 @@ export class Field extends EventTarget {
             last: true,
             processed: false
         };
-        log.log("[Field.setValue] Value changed:", { oldValue, newValue, stateKey });
+        logger.log("[Field.setValue] Value changed:", { oldValue, newValue, stateKey });
         this.changeSet.add(change);
         return this.processChanges(FieldChangeType.Value, !processChanges);
     }
@@ -1032,7 +1033,7 @@ export class Field extends EventTarget {
             processed: false
         };
         this.changeSet.add(change);
-        log.log("[Field.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
+        logger.log("[Field.setMetaValue] Meta", getMetaDependencyKey(this.name, metaKey), "value changed:", { oldValue, newValue, stateKey });
         return this.processChanges(FieldChangeType.MetaValue, !processChanges);
     }
 
@@ -1154,7 +1155,7 @@ export class FieldElementLinker extends FieldLinker {
     }
 
     _elementValueInputEventListener(event: Event): void {
-        log.log("[FieldElementLinker._elementValueInputEventListener] Event")
+        logger.log("[FieldElementLinker._elementValueInputEventListener] Event")
         this.field.setMetaValue("dirty", true, { initiator: this, processChanges: true });
         this._syncFieldValue();
     }
@@ -1180,11 +1181,11 @@ export class FieldElementLinker extends FieldLinker {
     }
 
     _syncElementValue(): void {
-        log.log("[FieldElementLinker._syncElementValue] Syncing element value");
+        logger.log("[FieldElementLinker._syncElementValue] Syncing element value");
         const value = this.field.getValue({ raw: true });
         const status = this.type.setElementValue(this.element, value);
         if (status !== TypeElementStatus.VALUE_SET_SUCCESS) {
-            log.log("[FieldElementLinker._syncElementMetaValue] Failed to set element value, status `%s`", status);
+            logger.log("[FieldElementLinker._syncElementMetaValue] Failed to set element value, status `%s`", status);
             return;
         }
     }
@@ -1192,13 +1193,13 @@ export class FieldElementLinker extends FieldLinker {
     _getElementValue(): any {
         const [value, status] = this.type.getElementValue(this.element);
         if (status !== TypeElementStatus.VALUE_SUCCESSFULLY_RECEIVED) {
-            log.warn("[FieldElementLinker._getElementValue] Failed to get value from element, status `%s`", status);
+            logger.warn("[FieldElementLinker._getElementValue] Failed to get value from element, status `%s`", status);
         }
         return value;
     }
 
     _syncFieldValue(): void {
-        log.log("[FieldElementLinker._syncFieldValue] Syncing field value");
+        logger.log("[FieldElementLinker._syncFieldValue] Syncing field value");
         const value = this._getElementValue();
         if (value instanceof Promise) {
             value.then(value => this.field.setValue(value, { initiator: this, processChanges: true, raw: true }));
@@ -1208,7 +1209,7 @@ export class FieldElementLinker extends FieldLinker {
     }
 
     _syncElementMetaValue(metaKey: string): void {
-        log.log("[FieldElementLinker._syncElementMetaValue] Syncing element meta value");
+        logger.log("[FieldElementLinker._syncElementMetaValue] Syncing element meta value");
         const value = this.field.getMetaValue(metaKey, { raw: true });
         const status = this.type.setElementMetaValue(this.element, metaKey, value);
         if (status === TypeElementStatus.META_VALUE_SET_SUCCESS) {
@@ -1261,19 +1262,19 @@ export class FieldElementLinker extends FieldLinker {
             return;
         }
 
-        log.log("[FieldElementLinker._syncElementMetaValue] Failed to set element meta value, status `%s`", status);
+        logger.log("[FieldElementLinker._syncElementMetaValue] Failed to set element meta value, status `%s`", status);
     }
 
     _getElementMetaValue(metaKey: string): any {
         const [value, status] = this.type.getElementMetaValue(this.element, metaKey);
         if (status !== TypeElementStatus.META_VALUE_SUCCESSFULLY_RECEIVED) {
-            log.warn("[FieldElementLinker._getElementMetaValue] Failed to get value from element, status `%s`", status);
+            logger.warn("[FieldElementLinker._getElementMetaValue] Failed to get value from element, status `%s`", status);
         }
         return value;
     }
 
     _syncFieldMetaValue(metaKey: string): void {
-        log.log("[FieldElementLinker._syncFieldMeta] Syncing field meta value");
+        logger.log("[FieldElementLinker._syncFieldMeta] Syncing field meta value");
         this.field.setMetaValue(metaKey, this._getElementMetaValue(metaKey), { initiator: this, processChanges: true });
     }
 }
@@ -1519,7 +1520,7 @@ export class Form extends EventTarget {
                 type: "disable-when",
                 callback: async () => {
                     const disabled = await disableWhen();
-                    // log.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
+                    // logger.log(`[Effect.DisableWhen] Field ${fieldName} disabled: `, disabled);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
                     return field.setMetaValue("disabled", disabled, { processChanges: true });
                 },
@@ -1536,7 +1537,7 @@ export class Form extends EventTarget {
                 type: "visible-when",
                 callback: async () => {
                     const visible = await visibleWhen();
-                    // log.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
+                    // logger.log(`[Effect.VisibleWhen] Field ${fieldName} visible: `, visible);
                     const field = this.fields.get(fieldName).getAdapter({ initiator: this });
                     return field.setMetaValue("visible", visible, { processChanges: true });
                 },
@@ -1575,7 +1576,7 @@ export class Form extends EventTarget {
                         return field.processChanges();
                     }
                     const value = await autofillWith();
-                    // log.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
+                    // logger.log(`[Effect.FieldAutofill] Field ${fieldName} value: `, value);
                     field.setMetaValue("autofill", field.setValue(value).size !== 0);
                     return field.processChanges();
                 },
