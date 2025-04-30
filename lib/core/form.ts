@@ -161,8 +161,8 @@ export class Type {
                 let max = parseFloat(element.max);
                 let masked = element.dataset.masked === "true";
                 return this.number({
-                    min: Number.isNaN(min) ? undefined : min,
-                    max: Number.isNaN(max) ? undefined : max,
+                    min: Number.isNaN(min) ? -Infinity : min,
+                    max: Number.isNaN(max) ? Infinity : max,
                     masked
                 });
             case "text":
