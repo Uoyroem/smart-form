@@ -1446,6 +1446,10 @@ export class Form extends EventTarget {
         }
     }
 
+    async validate() {
+        return this.form.checkValidity();
+    }
+
     _handleChanges(event: Event) {
         const changes = (event as FieldChangesEvent).changes;
         for (const changesManager of this._changesManagers) {
